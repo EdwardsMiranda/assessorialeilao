@@ -1,0 +1,202 @@
+
+import React, { useState } from 'react';
+import { useApp } from '../context/AppContext';
+import { Client } from '../types';
+import { UserPlus, Search, Trash2, Phone, Mail, MapPin, DollarSign, Briefcase } from 'lucide-react';
+
+export const Clients: React.FC = () => {
+  const { clients, addClient, removeClient } = useApp();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // New Client Form
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [cities, setCities] = useState('');
+  const [maxBid, setMaxBid] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !phone) return;
+
+    const newClient: Client = {
+        id: Date.now().toString(),
+        name,
+        phone,
+        email,
+        investmentThesis: {
+            cities: cities.split(',').map(c => c.trim()).filter(Boolean),
+            maxBidValue: parseFloat(maxBid) || 0,
+            notes
+        },
+        addedAt: new Date().toISOString()
+    };
+    addClient(newClient);
+    
+    // Reset
+    setName(''); setPhone(''); setEmail(''); setCities(''); setMaxBid(''); setNotes('');
+  };
+
+  const filteredClients = clients.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    c.investmentThesis.cities.some(city => city.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const formatCurrency = (val: number) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-800">Investidores (CRM)</h2>
+        <p className="text-gray-500">Gerencie sua base de clientes e teses de investimento.</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Add Form */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-fit">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-green-600" /> Cadastrar Investidor
+            </h3>
+            <form onSubmit={handleAdd} className="space-y-4">
+                <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Nome Completo</label>
+                    <input 
+                        type="text" required value={name} onChange={e => setName(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded bg-white text-sm"
+                        placeholder="Ex: Investidor Ltda"
+                    />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">WhatsApp</label>
+                        <input 
+                            type="text" required value={phone} onChange={e => setPhone(e.target.value)}
+                            className="w-full p-2 border border-gray-300 rounded bg-white text-sm"
+                            placeholder="(11) 99999-9999"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Email (Opcional)</label>
+                        <input 
+                            type="email" value={email} onChange={e => setEmail(e.target.value)}
+                            className="w-full p-2 border border-gray-300 rounded bg-white text-sm"
+                        />
+                    </div>
+                </div>
+
+                <div className="border-t border-gray-100 pt-3 mt-2">
+                    <p className="text-xs font-bold text-gray-500 uppercase mb-2">Tese de Investimento</p>
+                    <div className="space-y-3">
+                         <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Cidades de Interesse (Separar por vírgula)</label>
+                            <input 
+                                type="text" value={cities} onChange={e => setCities(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded bg-white text-sm"
+                                placeholder="São Paulo, Campinas, Santos"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Valor Máximo de Lance (R$)</label>
+                            <input 
+                                type="number" value={maxBid} onChange={e => setMaxBid(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded bg-white text-sm"
+                                placeholder="0,00"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Notas Adicionais</label>
+                            <textarea 
+                                value={notes} onChange={e => setNotes(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded bg-white text-sm"
+                                rows={2}
+                                placeholder="Ex: Prefere imóveis comerciais..."
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <button 
+                    type="submit"
+                    className="w-full py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700"
+                >
+                    Salvar Investidor
+                </button>
+            </form>
+        </div>
+
+        {/* Client List */}
+        <div className="lg:col-span-2 space-y-4">
+             {/* Toolbar */}
+             <div className="bg-white p-4 rounded-xl border border-gray-200 flex items-center justify-between">
+                 <h3 className="font-bold text-gray-700">Base de Clientes</h3>
+                 <div className="relative w-64">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Buscar investidor..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 p-2 w-full border border-gray-300 rounded text-sm bg-white"
+                    />
+                 </div>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredClients.length === 0 ? (
+                    <div className="col-span-2 text-center py-10 text-gray-500">Nenhum cliente encontrado.</div>
+                ) : (
+                    filteredClients.map(client => (
+                        <div key={client.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow relative group">
+                            <button 
+                                onClick={() => removeClient(client.id)}
+                                className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Remover"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
+                                    {client.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-gray-900">{client.name}</h4>
+                                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                                        <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {client.phone}</span>
+                                        {client.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {client.email}</span>}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 p-3 rounded border border-gray-100 text-xs space-y-2">
+                                <div className="flex gap-2">
+                                    <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-700 font-medium">
+                                        {client.investmentThesis.cities.length > 0 ? client.investmentThesis.cities.join(', ') : 'Sem região definida'}
+                                    </span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <DollarSign className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-700">
+                                        Até <span className="font-bold text-green-700">{formatCurrency(client.investmentThesis.maxBidValue)}</span>
+                                    </span>
+                                </div>
+                                {client.investmentThesis.notes && (
+                                    <div className="flex gap-2 border-t pt-2 border-gray-200 mt-2">
+                                        <Briefcase className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                        <span className="text-gray-600 italic">{client.investmentThesis.notes}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                )}
+             </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};

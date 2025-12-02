@@ -1,0 +1,208 @@
+
+import { GoogleGenAI } from "@google/genai";
+
+const getClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("API_KEY not found in environment variables.");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
+export const analyzePropertyRisks = async (propertyDescription: string, modality: string): Promise<string> => {
+  const ai = getClient();
+  if (!ai) return "Erro: Chave de API não configurada. Não é possível realizar a análise automática.";
+
+  const prompt = `
+    Atue como um especialista sênior em investimentos imobiliários e leilões no Brasil.
+    
+    Analise o seguinte texto descritivo de um imóvel em leilão na modalidade: ${modality}.
+    
+    Texto do imóvel:
+    "${propertyDescription}"
+
+    Gere um relatório conciso em formato HTML (apenas as tags internas como <ul>, <li>, <strong>, <p>) com:
+    1. Pontos de Atenção Críticos (ex: ocupação, dívidas mencionadas).
+    2. Documentação Necessária sugerida para esta modalidade.
+    3. Potencial de Risco (Baixo, Médio, Alto) com breve justificativa.
+    
+    Seja direto e objetivo.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    
+    return response.text || "Não foi possível gerar uma análise.";
+  } catch (error) {
+    console.error("Gemini API Error:", error);
+    return "Ocorreu um erro ao tentar analisar os dados com a IA.";
+  }
+};
+
+export const extractDataFromImage = async (base64Image: string): Promise<{ 
+    cityState: string, 
+    condoName: string, 
+    address: string,
+    privateArea: number,
+    initialBid: number,
+    bankValuation: number
+} | null> => {
+  const ai = getClient();
+  if (!ai) return null;
+
+  // Remove header data:image/png;base64, if present
+  const base64Data = base64Image.split(',')[1] || base64Image;
+
+  const prompt = `
+    Analise esta imagem de um anúncio de leilão de imóvel (espelho do leilão).
+    Extraia as seguintes informações e retorne APENAS um JSON válido.
+    
+    Para valores numéricos, converta para float (ex: "R$ 150.000,00" vira 150000.00).
+
+    1. "cityState": Cidade e UF no formato "Cidade-UF".
+    2. "condoName": Nome do condomínio/edifício. Se não encontrar, string vazia.
+    3. "address": O endereço contendo Rua e Número. REGRA: NÃO inclua complemento, NÃO inclua apto, NÃO inclua CEP.
+    4. "privateArea": Área privativa em m² (number).
+    5. "initialBid": Lance Inicial ou Valor Mínimo de Venda (number).
+    6. "bankValuation": Valor de Avaliação do Banco ou Avaliação Total (number).
+
+    Retorne apenas o JSON, sem markdown.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: {
+        parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: base64Data } },
+          { text: prompt }
+        ]
+      }
+    });
+
+    const text = response.text || "{}";
+    const jsonStr = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(jsonStr);
+  } catch (error) {
+    console.error("Gemini Vision Error:", error);
+    return null;
+  }
+};
+
+export const extractEditalData = async (base64Image: string): Promise<{ homologationDate: string } | null> => {
+  const ai = getClient();
+  if (!ai) return null;
+
+  const base64Data = base64Image.split(',')[1] || base64Image;
+
+  const prompt = `
+    Analise esta imagem de um Edital de Leilão ou Regras de Venda.
+    Tente encontrar a "Data de Homologação", "Data do Resultado", ou "Data de Divulgação do Vencedor".
+    
+    Se encontrar uma data específica, retorne no formato YYYY-MM-DD.
+    Se não encontrar uma data explícita, mas encontrar texto como "2 dias úteis após...", retorne null (deixe o sistema calcular).
+    
+    Retorne APENAS um JSON válido:
+    {
+      "homologationDate": "YYYY-MM-DD" || null
+    }
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: {
+        parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: base64Data } },
+          { text: prompt }
+        ]
+      }
+    });
+
+    const text = response.text || "{}";
+    const jsonStr = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(jsonStr);
+  } catch (error) {
+    console.error("Gemini Edital Error:", error);
+    return null;
+  }
+};
+
+export const analyzeRegistryFile = async (base64File: string, mimeType: string = 'application/pdf'): Promise<any | null> => {
+  const ai = getClient();
+  if (!ai) return null;
+
+  const base64Data = base64File.split(',')[1] || base64File;
+
+  const prompt = `
+    Analise este documento de Matrícula de Imóvel (Registro de Imóveis).
+    Busque por averbações ou registros de risco jurídico.
+    
+    Retorne APENAS um JSON com os seguintes campos baseados na análise:
+    
+    1. "criticalImpediment":
+       - Se encontrar "Penhora", retorne "Penhora".
+       - Se encontrar "Arresto", retorne "Arresto".
+       - Se encontrar "Indisponibilidade", retorne "Indisponibilidade".
+       - Se não encontrar nenhum desses, retorne "Nada Consta".
+    
+    2. "bankConsolidation":
+       - Se houver averbação de "Consolidação da Propriedade" em nome de banco/fiduciário, retorne "Sim".
+       - Caso contrário, retorne "Não".
+
+    3. "propterRem":
+       - Se encontrar menção a "Ação de Cobrança de Condomínio" ou dívida condominial, retorne "Processo de condomínio".
+       - Se encontrar menção a "Execução Fiscal" ou dívida de IPTU/Prefeitura, retorne "IPTU".
+       - Caso contrário, retorne "Nada Consta".
+    
+    Retorne apenas o JSON limpo.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: {
+        parts: [
+          { inlineData: { mimeType: mimeType, data: base64Data } },
+          { text: prompt }
+        ]
+      }
+    });
+
+    const text = response.text || "{}";
+    const jsonStr = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(jsonStr);
+  } catch (error) {
+    console.error("Gemini Registry Error:", error);
+    return null;
+  }
+};
+
+export const getItbiRate = async (cityState: string): Promise<number | null> => {
+  const ai = getClient();
+  if (!ai) return null;
+
+  const prompt = `
+    Qual é a alíquota padrão de ITBI (Imposto sobre Transmissão de Bens Imóveis) para a cidade de "${cityState}" no Brasil?
+    Retorne APENAS o número da porcentagem (exemplo: se for 3%, retorne 3.0). Se for uma faixa, retorne a maior comum (ex: 3.0).
+    Não coloque texto, apenas o número.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    
+    const text = response.text?.trim() || "0";
+    const rate = parseFloat(text.replace('%', '').replace(',', '.'));
+    return isNaN(rate) ? null : rate;
+  } catch (error) {
+    console.error("Gemini ITBI Error:", error);
+    return null;
+  }
+};
