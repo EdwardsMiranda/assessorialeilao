@@ -14,20 +14,12 @@ import { Login } from './pages/Login';
 import { Clients } from './pages/Clients';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useApp();
+  const { isAuthenticated } = useApp();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    );
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
   }
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <Layout>{children}</Layout>;
 };
 

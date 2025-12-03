@@ -1,10 +1,12 @@
-
+```
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Lock, Mail, Briefcase, ArrowRight } from 'lucide-react';
 
 export const Login: React.FC = () => {
     const { login } = useApp();
+    const navigate = useNavigate();
 
     // Form State
     const [email, setEmail] = useState('');
@@ -19,7 +21,12 @@ export const Login: React.FC = () => {
 
         try {
             const success = await login(email, password);
-            if (!success) setError('Email ou senha inválidos, ou usuário bloqueado.');
+            if (success) {
+                // Redirect to dashboard after successful login
+                navigate('/dashboard');
+            } else {
+                setError('Email ou senha inválidos, ou usuário bloqueado.');
+            }
         } catch (err) {
             setError('Erro ao fazer login. Tente novamente.');
         } finally {
