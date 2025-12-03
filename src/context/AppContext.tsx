@@ -97,7 +97,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // --- MOCK FILE STORAGE (In-Memory for Demo) ---
   // In a real app, this would be S3 or a backend storage
-  const [fileStorage, setFileStorage] = useState<Record<string, string>>({});
+  const [, setFileStorage] = useState<Record<string, string>>({});
 
   // Persistence Effects
   useEffect(() => { localStorage.setItem('leilao_properties', JSON.stringify(properties)); }, [properties]);
