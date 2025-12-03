@@ -52,19 +52,6 @@ export const useApp = () => {
   return context;
 };
 
-// Helper for Business Days
-function addBusinessDays(dateStr: string, days: number): string {
-  let date = new Date(dateStr);
-  let count = 0;
-  while (count < days) {
-    date.setDate(date.getDate() + 1);
-    if (date.getDay() !== 0 && date.getDay() !== 6) {
-      count++;
-    }
-  }
-  return date.toISOString().split('T')[0];
-}
-
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -314,7 +301,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        const base64Data = reader.result as string;
         const extension = file.name.split('.').pop() || 'dat';
         const cleanDocType = docType.toUpperCase().replace(/[^A-Z0-9]/g, '_');
         const newFileName = `PROP-${propertyId}_${cleanDocType}_${Date.now()}.${extension}`;

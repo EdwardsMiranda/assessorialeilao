@@ -36,8 +36,8 @@ export const Marketplace: React.FC = () => {
         return daysUntil <= 3;
     };
 
-    const handleClaim = (propertyId: string) => {
-        const success = claimProperty(propertyId);
+    const handleClaim = async (propertyId: string) => {
+        const success = await claimProperty(propertyId);
         if (success) {
             // Success: Property status changes to EM_ANALISE in Context, 
             // triggering re-render and removing it from 'availableProperties' automatically.
