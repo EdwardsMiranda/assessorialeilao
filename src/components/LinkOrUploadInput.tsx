@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Sparkles, FileText } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -15,10 +15,10 @@ interface LinkOrUploadInputProps {
   docType: string;
 }
 
-export const LinkOrUploadInput: React.FC<LinkOrUploadInputProps> = ({ 
-  label, 
-  value, 
-  onChange, 
+export const LinkOrUploadInput: React.FC<LinkOrUploadInputProps> = ({
+  label,
+  value,
+  onChange,
   disabled,
   placeholder = "https://...",
   onAiAction,
@@ -35,12 +35,12 @@ export const LinkOrUploadInput: React.FC<LinkOrUploadInputProps> = ({
       setIsUploading(true);
       const file = e.target.files[0];
       try {
-          const newFileName = await uploadDocument(propertyId, file, docType);
-          onChange(`[ARQUIVO] ${newFileName}`);
+        const newFileName = await uploadDocument(propertyId, file, docType);
+        onChange(`[ARQUIVO] ${newFileName}`);
       } catch (error) {
-          alert("Erro ao salvar arquivo.");
+        alert("Erro ao salvar arquivo.");
       } finally {
-          setIsUploading(false);
+        setIsUploading(false);
       }
     }
   };
@@ -50,26 +50,26 @@ export const LinkOrUploadInput: React.FC<LinkOrUploadInputProps> = ({
       <div className="flex justify-between items-end mb-1">
         {label && <label className="block text-xs font-medium text-gray-700">{label}</label>}
         {onAiAction && (
-             <button
-                type="button"
-                onClick={onAiAction}
-                className="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200 hover:bg-indigo-100 flex items-center gap-1 transition-colors"
-                disabled={disabled}
-                title="Processar com IA"
-             >
-                 <Sparkles className="w-3 h-3" /> {aiActionLabel}
-             </button>
+          <button
+            type="button"
+            onClick={onAiAction}
+            className="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200 hover:bg-indigo-100 flex items-center gap-1 transition-colors"
+            disabled={disabled}
+            title="Processar com IA"
+          >
+            <Sparkles className="w-3 h-3" /> {aiActionLabel}
+          </button>
         )}
       </div>
       <div className="flex gap-1 mb-1">
-        <button 
+        <button
           type="button"
           onClick={() => setMode('link')}
           className={`flex-1 py-0.5 text-[10px] rounded border ${mode === 'link' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-500'}`}
         >
           Link
         </button>
-        <button 
+        <button
           type="button"
           onClick={() => setMode('upload')}
           className={`flex-1 py-0.5 text-[10px] rounded border ${mode === 'upload' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-500'}`}
@@ -77,7 +77,7 @@ export const LinkOrUploadInput: React.FC<LinkOrUploadInputProps> = ({
           Upload
         </button>
       </div>
-      
+
       {mode === 'link' ? (
         <div className="relative">
           <input
@@ -91,18 +91,18 @@ export const LinkOrUploadInput: React.FC<LinkOrUploadInputProps> = ({
         </div>
       ) : (
         <div className="relative">
-             <input
-              type="file"
-              onChange={handleFileChange}
-              disabled={disabled || isUploading}
-              className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 bg-white"
-            />
-            {isUploading && <span className="text-[10px] text-blue-600 animate-pulse">Enviando e renomeando...</span>}
-            {value.startsWith('[ARQUIVO]') && !isUploading && (
-                <p className="mt-1 text-[10px] text-green-600 flex items-center gap-1 truncate" title={value.replace('[ARQUIVO] ', '')}>
-                    <FileText className="w-3 h-3" /> {value.replace('[ARQUIVO] ', '')}
-                </p>
-            )}
+          <input
+            type="file"
+            onChange={handleFileChange}
+            disabled={disabled || isUploading}
+            className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 bg-white"
+          />
+          {isUploading && <span className="text-[10px] text-blue-600 animate-pulse">Enviando e renomeando...</span>}
+          {value.startsWith('[ARQUIVO]') && !isUploading && (
+            <p className="mt-1 text-[10px] text-green-600 flex items-center gap-1 truncate" title={value.replace('[ARQUIVO] ', '')}>
+              <FileText className="w-3 h-3" /> {value.replace('[ARQUIVO] ', '')}
+            </p>
+          )}
         </div>
       )}
     </div>

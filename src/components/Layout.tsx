@@ -1,14 +1,13 @@
 
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, 
   PlusCircle, 
   Briefcase, 
   CheckSquare, 
   Menu, 
-  User as UserIcon,
-  ChevronDown,
   Award,
   Trophy,
   Users,
@@ -19,14 +18,13 @@ import { UserRole } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
-  activePage: string;
-  onNavigate: (page: string) => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activePage, onNavigate }) => {
+export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { currentUser, logout } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   if (!currentUser) return null;
 
@@ -35,23 +33,26 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, onNavigate
 
   if (currentUser.role === UserRole.ANALYST) {
       navItems = [
-        { id: 'inbox', label: 'Novos Imóveis', icon: PlusCircle }, 
-        { id: 'marketplace', label: 'Mural de Oportunidades', icon: Briefcase },
-        { id: 'my-work', label: 'Minhas Análises', icon: CheckSquare },
+        { id: 'inbox', path: '/inbox', label: 'Novos Imóveis', icon: PlusCircle }, 
+        { id: 'marketplace', path: '/marketplace', label: 'Mural de Oportunidades', icon: Briefcase },
+        { id: 'my-work', path: '/my-work', label: 'Minhas Análises', icon: CheckSquare },
       ];
   } else {
       // ADMIN sees everything
       navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: Home },
-        { id: 'inbox', label: 'Novos Imóveis', icon: PlusCircle }, 
-        { id: 'marketplace', label: 'Mural de Oportunidades', icon: Briefcase },
-        { id: 'my-work', label: 'Minhas Análises', icon: CheckSquare },
-        { id: 'admin-opportunities', label: 'Oportunidades Validadas', icon: Award },
-        { id: 'sold-properties', label: 'Imóveis Arrematados', icon: Trophy },
-        { id: 'clients', label: 'Investidores', icon: Contact },
-        { id: 'user-management', label: 'Gestão de Usuários', icon: Users },
+        { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: Home },
+        { id: 'inbox', path: '/inbox', label: 'Novos Imóveis', icon: PlusCircle }, 
+        { id: 'marketplace', path: '/marketplace', label: 'Mural de Oportunidades', icon: Briefcase },
+        { id: 'my-work', path: '/my-work', label: 'Minhas Análises', icon: CheckSquare },
+        { id: 'admin-opportunities', path: '/admin-opportunities', label: 'Oportunidades Validadas', icon: Award },
+        { id: 'sold-properties', path: '/sold-properties', label: 'Imóveis Arrematados', icon: Trophy },
+        { id: 'clients', path: '/clients', label: 'Investidores', icon: Contact },
+        { id: 'user-management', path: '/user-management', label: 'Gestão de Usuários', icon: Users },
       ];
   }
+
+  const activeItem = navItems.find(item => location.pathname.startsWith(item.path));
+  const activeId = activeItem ? activeItem.id : '';
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -80,16 +81,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, onNavigate
             <button
               key={item.id}
               onClick={() => {
-                onNavigate(item.id);
+                navigate(item.path);
                 setIsMobileMenuOpen(false);
               }}
               className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                activePage === item.id
+                activeId === item.id
                   ? 'bg-blue-50 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               }`}
             >
-              <item.icon className={`w-5 h-5 mr-3 ${activePage === item.id ? 'text-blue-600' : 'text-gray-400'}`} />
+              <item.icon className={`w-5 h-5 mr-3 ${activeId === item.id ? 'text-blue-600' : 'text-gray-400'}`} />
               {item.label}
             </button>
           ))}
@@ -112,7 +113,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, onNavigate
                 className="text-gray-400 hover:text-red-600"
                 title="Sair"
              >
-                 <LogOut className="w-5 h-5" />
+                <LogOut className="w-5 h-5" />
              </button>
           </div>
         </div>
@@ -130,7 +131,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, onNavigate
           </button>
 
           <h2 className="text-lg font-semibold text-gray-800 hidden sm:block">
-            {navItems.find(i => i.id === activePage)?.label}
+            {activeItem?.label || 'Dashboard'}
           </h2>
 
           <div className="flex items-center gap-2">

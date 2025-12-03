@@ -1,8 +1,8 @@
-
+```
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AnalysisStatus, Property } from '../types';
-import { ExternalLink, Eye, DollarSign, AlertTriangle, Send, CheckSquare, MapPin, CreditCard, Gavel, Search, ArrowUpDown, Trophy, X, Calendar } from 'lucide-react';
+import { Eye, DollarSign, AlertTriangle, Send, CheckSquare, MapPin, CreditCard, Gavel, Search, ArrowUpDown, Trophy, X, Calendar } from 'lucide-react';
 import { AnalysisModal } from '../components/AnalysisModal';
 
 export const AdminOpportunities: React.FC = () => {
@@ -165,7 +165,7 @@ export const AdminOpportunities: React.FC = () => {
                 const matchedClients = clients.filter(c => checkClientMatch(c, prop));
 
                 return (
-                    <div key={prop.id} className={`bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition-shadow ${isSent ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}>
+                    <div key={prop.id} className={`bg - white rounded - xl shadow - sm border p - 5 hover: shadow - md transition - shadow ${ isSent ? 'border-green-200 bg-green-50/30' : 'border-gray-200' } `}>
                         <div className="flex flex-col gap-4">
                             
                             {/* Top Row: Badges */}
@@ -265,12 +265,12 @@ export const AdminOpportunities: React.FC = () => {
                                         <div className="flex items-center gap-2">
                                             <input 
                                                 type="checkbox"
-                                                id={`sent-${prop.id}`}
+                                                id={`sent - ${ prop.id } `}
                                                 checked={isSent}
                                                 onChange={(e) => updateManagerDispatch(prop.id, recipient, e.target.checked, clientId)}
                                                 className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
                                             />
-                                            <label htmlFor={`sent-${prop.id}`} className="text-sm text-blue-900 font-medium cursor-pointer select-none">
+                                            <label htmlFor={`sent - ${ prop.id } `} className="text-sm text-blue-900 font-medium cursor-pointer select-none">
                                                 Marcar como Enviado
                                             </label>
                                         </div>
