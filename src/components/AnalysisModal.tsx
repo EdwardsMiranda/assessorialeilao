@@ -362,8 +362,20 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
 
     const handleSave = (status: AnalysisStatus) => {
         const finalMetrics = calculateMetrics(formData.initialBid || 0);
+
+        // Sanitize date fields to avoid "invalid input syntax for type date: ''"
+        const sanitizedFormData = { ...formData };
+        if (sanitizedFormData.homologationDate === '') {
+            // @ts-ignore - Sending null to Supabase for date column
+            sanitizedFormData.homologationDate = null;
+        }
+        if (sanitizedFormData.lastOwnerRegistryDate === '') {
+            // @ts-ignore - Sending null to Supabase for date column
+            sanitizedFormData.lastOwnerRegistryDate = null;
+        }
+
         const dataToSave = {
-            ...formData,
+            ...sanitizedFormData,
             finalRoi: finalMetrics.roi,
             finalNetProfit: finalMetrics.netProfit
         };
