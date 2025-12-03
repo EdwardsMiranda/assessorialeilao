@@ -1,12 +1,8 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Property, User, UserRole, AnalysisStatus, AuctionModality, PropertyAnalysisData, Client } from '../types';
-
-// Initial Mock Users for seeding (password: 123456)
-const INITIAL_USERS: User[] = [
-  { id: 'u1', name: 'Carlos Gestor', email: 'admin@leilao.com', password: '123', role: UserRole.ADMIN, avatar: 'https://picsum.photos/seed/u1/40', blocked: false },
-  { id: 'u2', name: 'Ana Analista', email: 'ana@leilao.com', password: '123', role: UserRole.ANALYST, avatar: 'https://picsum.photos/seed/u2/40', blocked: false },
-];
+import { authService } from '../services/auth.service';
+import { propertyService } from '../services/property.service';
+import { clientService } from '../services/client.service';
 
 interface AppContextType {
   currentUser: User | null;
@@ -14,21 +10,22 @@ interface AppContextType {
   properties: Property[];
   clients: Client[];
   isAuthenticated: boolean;
-  login: (email: string, pass: string) => boolean;
-  createUser: (name: string, email: string, pass: string, role?: UserRole) => boolean;
-  logout: () => void;
-  updateUserRole: (userId: string, role: UserRole) => void;
-  toggleUserBlock: (userId: string) => void;
+  isLoading: boolean;
+  login: (email: string, pass: string) => Promise<boolean>;
+  createUser: (name: string, email: string, pass: string, role?: UserRole) => Promise<boolean>;
+  logout: () => Promise<void>;
+  updateUserRole: (userId: string, role: UserRole) => Promise<void>;
+  toggleUserBlock: (userId: string) => Promise<void>;
 
   // CRM
-  addClient: (client: Client) => void;
-  removeClient: (clientId: string) => void;
+  addClient: (client: Client) => Promise<void>;
+  removeClient: (clientId: string) => Promise<void>;
 
   // Properties & Files
   findPropertyByUrl: (url: string) => Property | undefined;
-  addProperty: (url: string, modality: AuctionModality, auctionDate: string, title?: string) => void;
-  addProperties: (items: Array<{ url: string, modality: AuctionModality, auctionDate: string, title: string }>) => void;
-  claimProperty: (propertyId: string) => boolean; // Returns success/fail
+  addProperty: (url: string, modality: AuctionModality, auctionDate: string, title?: string) => Promise<void>;
+  addProperties: (items: Array<{ url: string, modality: AuctionModality, auctionDate: string, title: string }>) => Promise<void>;
+  claimProperty: (propertyId: string) => Promise<boolean>;
   updateStatus: (
     propertyId: string,
     status: AnalysisStatus,
@@ -36,9 +33,9 @@ interface AppContextType {
     abortReason?: string,
     aiAnalysis?: string,
     analysisData?: PropertyAnalysisData
-  ) => void;
-  updateManagerDispatch: (propertyId: string, recipient: string, sent: boolean, clientId?: string) => void;
-  markAsSold: (propertyId: string, soldDate: string, soldAmount: number, buyerName: string) => void;
+  ) => Promise<void>;
+  updateManagerDispatch: (propertyId: string, recipient: string, sent: boolean, clientId?: string) => Promise<void>;
+  markAsSold: (propertyId: string, soldDate: string, soldAmount: number, buyerName: string) => Promise<void>;
   getStats: () => { total: number; pending: number; inProgress: number; completed: number; aborted: number; sold: number };
 
   // File Management
@@ -61,7 +58,6 @@ function addBusinessDays(dateStr: string, days: number): string {
   let count = 0;
   while (count < days) {
     date.setDate(date.getDate() + 1);
-    // 0 = Sunday, 6 = Saturday
     if (date.getDay() !== 0 && date.getDay() !== 6) {
       count++;
     }
@@ -70,227 +66,247 @@ function addBusinessDays(dateStr: string, days: number): string {
 }
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // --- USERS & AUTH ---
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('leilao_users_db');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
-
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('leilao_session');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const isAuthenticated = !!currentUser;
 
-  // --- CLIENTS (CRM) ---
-  const [clients, setClients] = useState<Client[]>(() => {
-    const saved = localStorage.getItem('leilao_clients');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // --- PROPERTIES ---
-  const [properties, setProperties] = useState<Property[]>(() => {
-    const saved = localStorage.getItem('leilao_properties');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // --- MOCK FILE STORAGE (In-Memory for Demo) ---
-  // In a real app, this would be S3 or a backend storage
-  const [, setFileStorage] = useState<Record<string, string>>({});
-
-  // Persistence Effects
-  useEffect(() => { localStorage.setItem('leilao_properties', JSON.stringify(properties)); }, [properties]);
-  useEffect(() => { localStorage.setItem('leilao_users_db', JSON.stringify(users)); }, [users]);
+  // Initialize: Check session and load data
   useEffect(() => {
-    if (currentUser) localStorage.setItem('leilao_session', JSON.stringify(currentUser));
-    else localStorage.removeItem('leilao_session');
-  }, [currentUser]);
-  useEffect(() => { localStorage.setItem('leilao_clients', JSON.stringify(clients)); }, [clients]);
+    const initializeApp = async () => {
+      try {
+        // Check if user is already logged in
+        const { user } = await authService.getSession();
+        if (user) {
+          setCurrentUser(user);
+          await loadAllData();
+        }
+      } catch (error) {
+        console.error('Initialize error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeApp();
+  }, []);
+
+  // Load all data from database
+  const loadAllData = async () => {
+    try {
+      const [usersResult, propertiesResult, clientsResult] = await Promise.all([
+        authService.getAllUsers(),
+        propertyService.getAll(),
+        clientService.getAll(),
+      ]);
+
+      if (!usersResult.error) setUsers(usersResult.users);
+      if (!propertiesResult.error) setProperties(propertiesResult.properties);
+      if (!clientsResult.error) setClients(clientsResult.clients);
+    } catch (error) {
+      console.error('Load data error:', error);
+    }
+  };
+
+  // Refresh properties from database
+  const refreshProperties = async () => {
+    const { properties: newProperties, error } = await propertyService.getAll();
+    if (!error) {
+      setProperties(newProperties);
+    }
+  };
+
+  // Refresh clients from database
+  const refreshClients = async () => {
+    const { clients: newClients, error } = await clientService.getAll();
+    if (!error) {
+      setClients(newClients);
+    }
+  };
+
+  // Refresh users from database
+  const refreshUsers = async () => {
+    const { users: newUsers, error } = await authService.getAllUsers();
+    if (!error) {
+      setUsers(newUsers);
+    }
+  };
 
   // --- AUTH ACTIONS ---
-  const login = (email: string, pass: string) => {
-    const user = users.find(u => u.email === email && u.password === pass);
+  const login = async (email: string, pass: string): Promise<boolean> => {
+    const { user, error } = await authService.login(email, pass);
+    if (error) {
+      alert(error);
+      return false;
+    }
     if (user) {
-      if (user.blocked) {
-        alert("Usuário bloqueado. Contate o administrador.");
-        return false;
-      }
       setCurrentUser(user);
+      await loadAllData();
       return true;
     }
     return false;
   };
 
-  const createUser = (name: string, email: string, pass: string, role: UserRole = UserRole.ANALYST) => {
-    if (users.find(u => u.email === email)) {
-      return false; // Email already exists
+  const createUser = async (name: string, email: string, pass: string, role: UserRole = UserRole.ANALYST): Promise<boolean> => {
+    const { success, error } = await authService.createUser(name, email, pass, role);
+    if (error) {
+      alert(error);
+      return false;
     }
-    const newUser: User = {
-      id: `u${Date.now()}`,
-      name,
-      email,
-      password: pass,
-      role: role,
-      avatar: `https://ui-avatars.com/api/?name=${name}&background=random`,
-      blocked: false
-    };
-    setUsers(prev => [...prev, newUser]);
-    return true;
+    if (success) {
+      await refreshUsers();
+      return true;
+    }
+    return false;
   };
 
-  const logout = () => {
+  const logout = async (): Promise<void> => {
+    await authService.logout();
     setCurrentUser(null);
+    setUsers([]);
+    setProperties([]);
+    setClients([]);
   };
 
-  const updateUserRole = (userId: string, role: UserRole) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
+  const updateUserRole = async (userId: string, role: UserRole): Promise<void> => {
+    const { success, error } = await authService.updateUserRole(userId, role);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshUsers();
+    }
   };
 
-  const toggleUserBlock = (userId: string) => {
-    setUsers(prev => prev.map(u =>
-      u.id === userId ? { ...u, blocked: !u.blocked } : u
-    ));
+  const toggleUserBlock = async (userId: string): Promise<void> => {
+    const { success, error } = await authService.toggleUserBlock(userId);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshUsers();
+    }
   };
 
   // --- CRM ACTIONS ---
-  const addClient = (client: Client) => {
-    setClients(prev => [...prev, client]);
+  const addClient = async (client: Client): Promise<void> => {
+    const { success, error } = await clientService.add(client);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshClients();
+    }
   };
 
-  const removeClient = (clientId: string) => {
-    setClients(prev => prev.filter(c => c.id !== clientId));
+  const removeClient = async (clientId: string): Promise<void> => {
+    const { success, error } = await clientService.remove(clientId);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshClients();
+    }
   };
 
   // --- PROPERTY ACTIONS ---
-  const findPropertyByUrl = (url: string) => {
+  const findPropertyByUrl = (url: string): Property | undefined => {
     return properties.find(p => p.url.trim() === url.trim());
   };
 
-  const addProperty = (url: string, modality: AuctionModality, auctionDate: string, title?: string) => {
+  const addProperty = async (url: string, modality: AuctionModality, auctionDate: string, title?: string): Promise<void> => {
     if (!currentUser) return;
-    const newProp: Property = {
-      id: Date.now().toString(),
-      url: url.trim(),
-      modality,
-      auctionDate,
-      title: title || 'Imóvel sem título',
-      status: AnalysisStatus.NAO_INICIADO,
-      assignedTo: null,
-      addedBy: currentUser.id,
-      addedAt: new Date().toISOString(),
-      notes: '',
-    };
-    setProperties(prev => [newProp, ...prev]);
+
+    const { success, error } = await propertyService.add(url, modality, auctionDate, title, currentUser.id);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshProperties();
+    }
   };
 
-  const addProperties = (items: Array<{ url: string, modality: AuctionModality, auctionDate: string, title: string }>) => {
+  const addProperties = async (items: Array<{ url: string, modality: AuctionModality, auctionDate: string, title: string }>): Promise<void> => {
     if (!currentUser) return;
-    const newProps: Property[] = items.map((item, index) => ({
-      id: (Date.now() + index).toString(),
-      url: item.url.trim(),
-      modality: item.modality,
-      auctionDate: item.auctionDate,
-      title: item.title || 'Imóvel Importado',
-      status: AnalysisStatus.NAO_INICIADO,
-      assignedTo: null,
-      addedBy: currentUser.id,
-      addedAt: new Date().toISOString(),
-      notes: '',
-    }));
 
-    setProperties(prev => [...newProps, ...prev]);
+    const { success, error } = await propertyService.addBulk(items, currentUser.id);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshProperties();
+    }
   };
 
-  const claimProperty = (propertyId: string) => {
+  const claimProperty = async (propertyId: string): Promise<boolean> => {
     if (!currentUser) return false;
 
-    let success = false;
-
-    setProperties(prev => prev.map(p => {
-      if (p.id === propertyId) {
-        // Critical Check: Is it already assigned?
-        if (p.assignedTo && p.assignedTo !== currentUser.id) {
-          return p; // Do not modify
-        }
-        // Claim it
-        success = true;
-        return { ...p, assignedTo: currentUser.id, status: AnalysisStatus.EM_ANALISE };
-      }
-      return p;
-    }));
-
-    return success;
+    const { success, error } = await propertyService.claim(propertyId, currentUser.id);
+    if (error) {
+      alert(error);
+      return false;
+    }
+    if (success) {
+      await refreshProperties();
+      return true;
+    }
+    return false;
   };
 
-  const updateStatus = (
+  const updateStatus = async (
     propertyId: string,
     status: AnalysisStatus,
     notes?: string,
     abortReason?: string,
     aiAnalysis?: string,
     analysisData?: PropertyAnalysisData
-  ) => {
-    setProperties(prev => prev.map(p => {
-      if (p.id === propertyId) {
-        const isEditingCompleted = (p.status === AnalysisStatus.ANALISADO || p.status === AnalysisStatus.ABORTADO) && status !== AnalysisStatus.ARREMATADO;
-
-        return {
-          ...p,
-          status,
-          ...(notes !== undefined && { notes }),
-          ...(abortReason !== undefined && { abortReason }),
-          ...(aiAnalysis !== undefined && { aiAnalysis }),
-          ...(analysisData !== undefined && { analysisData }),
-          ...(isEditingCompleted && { lastEditedAt: new Date().toISOString() })
-        };
-      }
-      return p;
-    }));
+  ): Promise<void> => {
+    const { success, error } = await propertyService.updateStatus(
+      propertyId,
+      status,
+      notes,
+      abortReason,
+      aiAnalysis,
+      analysisData
+    );
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshProperties();
+    }
   };
 
-  const updateManagerDispatch = (propertyId: string, recipient: string, sent: boolean, clientId?: string) => {
-    setProperties(prev => prev.map(p => {
-      if (p.id === propertyId) {
-        return {
-          ...p,
-          managerDispatch: { recipient, sent, clientId }
-        };
-      }
-      return p;
-    }));
+  const updateManagerDispatch = async (propertyId: string, recipient: string, sent: boolean, clientId?: string): Promise<void> => {
+    const { success, error } = await propertyService.updateManagerDispatch(propertyId, recipient, sent, clientId);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshProperties();
+    }
   };
 
-  const markAsSold = (propertyId: string, soldDate: string, soldAmount: number, buyerName: string) => {
-    setProperties(prev => prev.map(p => {
-      if (p.id === propertyId) {
-
-        // Auto-calculate Homologation Date logic
-        let finalAnalysisData = p.analysisData;
-
-        if (finalAnalysisData) {
-          // If date is missing OR user logic dictates auto-calc (Venda Direta/Online rule)
-          // Rule: 2 business days after sold date
-          if (!finalAnalysisData.homologationDate) {
-            const autoDate = addBusinessDays(soldDate, 2);
-            finalAnalysisData = {
-              ...finalAnalysisData,
-              homologationDate: autoDate
-            };
-          }
-        }
-
-        return {
-          ...p,
-          status: AnalysisStatus.ARREMATADO,
-          soldDate,
-          soldAmount,
-          buyerName,
-          analysisData: finalAnalysisData
-        };
-      }
-      return p;
-    }));
+  const markAsSold = async (propertyId: string, soldDate: string, soldAmount: number, buyerName: string): Promise<void> => {
+    const { success, error } = await propertyService.markAsSold(propertyId, soldDate, soldAmount, buyerName);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshProperties();
+    }
   };
 
   // --- FILE MANAGEMENT ---
@@ -299,18 +315,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64Data = reader.result as string;
-
-        // Standardized Naming Convention: PROP-{ID}_{DOCTYPE}_{TIMESTAMP}.{EXT}
         const extension = file.name.split('.').pop() || 'dat';
         const cleanDocType = docType.toUpperCase().replace(/[^A-Z0-9]/g, '_');
         const newFileName = `PROP-${propertyId}_${cleanDocType}_${Date.now()}.${extension}`;
-
-        // Simulate "Uploading" by storing in memory/state
-        // In a real app, this would POST to a server
-        setFileStorage(prev => ({
-          ...prev,
-          [newFileName]: base64Data
-        }));
 
         console.log(`[File System] Arquivo salvo: ${newFileName}`);
         resolve(newFileName);
@@ -331,7 +338,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   return (
     <AppContext.Provider value={{
-      currentUser, users, properties, clients, isAuthenticated,
+      currentUser, users, properties, clients, isAuthenticated, isLoading,
       login, createUser, logout, updateUserRole, toggleUserBlock,
       addClient, removeClient,
       findPropertyByUrl, addProperty, addProperties, claimProperty, updateStatus, updateManagerDispatch, markAsSold, getStats,
