@@ -102,7 +102,8 @@ export const propertyService = {
         modality: AuctionModality,
         auctionDate: string,
         title: string | undefined,
-        addedBy: string
+        addedBy: string,
+        initialAnalysisData?: Partial<PropertyAnalysisData>
     ): Promise<{ success: boolean; propertyId: string | null; error: string | null }> {
         try {
             const { data, error } = await supabase
@@ -123,6 +124,21 @@ export const propertyService = {
 
             if (error) {
                 return { success: false, propertyId: null, error: error.message };
+            }
+
+            // If we have initial analysis data (from AI), save it
+            if (initialAnalysisData && data.id) {
+                const { error: analysisError } = await supabase
+                    .from('property_analysis')
+                    .insert({
+                        property_id: data.id,
+                        ...mapAnalysisDataToDb({ ...initialAnalysisData } as PropertyAnalysisData)
+                    });
+
+                if (analysisError) {
+                    console.error('Error saving initial analysis:', analysisError);
+                    // We don't fail the whole operation, just log it
+                }
             }
 
             return { success: true, propertyId: data.id, error: null };

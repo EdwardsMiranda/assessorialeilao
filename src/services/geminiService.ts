@@ -35,7 +35,7 @@ export const analyzePropertyRisks = async (propertyDescription: string, modality
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    
+
     return response.text || "Não foi possível gerar uma análise.";
   } catch (error) {
     console.error("Gemini API Error:", error);
@@ -43,13 +43,13 @@ export const analyzePropertyRisks = async (propertyDescription: string, modality
   }
 };
 
-export const extractDataFromImage = async (base64Image: string): Promise<{ 
-    cityState: string, 
-    condoName: string, 
-    address: string,
-    privateArea: number,
-    initialBid: number,
-    bankValuation: number
+export const extractDataFromImage = async (base64Image: string): Promise<{
+  cityState: string,
+  condoName: string,
+  address: string,
+  privateArea: number,
+  initialBid: number,
+  bankValuation: number
 } | null> => {
   const ai = getClient();
   if (!ai) return null;
@@ -197,12 +197,77 @@ export const getItbiRate = async (cityState: string): Promise<number | null> => 
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    
+
     const text = response.text?.trim() || "0";
     const rate = parseFloat(text.replace('%', '').replace(',', '.'));
     return isNaN(rate) ? null : rate;
   } catch (error) {
     console.error("Gemini ITBI Error:", error);
+    return null;
+  }
+};
+
+export const extractDataFromUrl = async (url: string): Promise<{
+  cityState: string,
+  condoName: string,
+  privateArea: number,
+  initialBid: number,
+  bankValuation: number
+} | null> => {
+  const ai = getClient();
+  if (!ai) return null;
+
+  try {
+    // 1. Fetch HTML content via CORS Proxy
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const fetchResponse = await fetch(proxyUrl);
+
+    if (!fetchResponse.ok) {
+      console.error("Failed to fetch URL content via proxy");
+      return null;
+    }
+
+    const htmlText = await fetchResponse.text();
+
+    // Limit HTML size to avoid token limits (approx 20k chars should be enough for main content)
+    // We try to grab the body content
+    const bodyContent = htmlText.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] || htmlText.substring(0, 30000);
+    const cleanedContent = bodyContent.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, "")
+      .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, "")
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .substring(0, 20000);
+
+    // 2. Ask Gemini to extract data
+    const prompt = `
+      Analise o texto abaixo extraído de uma página de leilão de imóveis.
+      Extraia as seguintes informações e retorne APENAS um JSON válido.
+      
+      Para valores numéricos, converta para float (ex: "R$ 150.000,00" vira 150000.00).
+      
+      1. "cityState": Cidade e UF no formato "Cidade-UF".
+      2. "condoName": Nome do condomínio/edifício. Se não encontrar, string vazia.
+      3. "privateArea": Área privativa em m² (number).
+      4. "initialBid": Lance Inicial ou Valor Mínimo de Venda (number).
+      5. "bankValuation": Valor de Avaliação do Banco ou Avaliação Total (number).
+
+      Texto da página:
+      "${cleanedContent}"
+
+      Retorne apenas o JSON, sem markdown.
+    `;
+
+    const aiResponse = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+
+    const text = aiResponse.text || "{}";
+    const jsonStr = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(jsonStr);
+
+  } catch (error) {
+    console.error("Gemini URL Extraction Error:", error);
     return null;
   }
 };

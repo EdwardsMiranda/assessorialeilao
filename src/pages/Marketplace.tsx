@@ -9,11 +9,16 @@ export const Marketplace: React.FC = () => {
     // Local State for Filters (Independent per user session)
     const [sortBy, setSortBy] = useState<'date' | 'modality' | 'created'>('date');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [monthFilter, setMonthFilter] = useState('');
 
     // Filter for properties that are STRICTLY not started. 
     // Once claimed, status changes to EM_ANALISE and it disappears from here immediately.
     const availableProperties = properties
-        .filter(p => p.status === AnalysisStatus.NAO_INICIADO);
+        .filter(p => {
+            const matchesStatus = p.status === AnalysisStatus.NAO_INICIADO;
+            const matchesMonth = monthFilter ? p.auctionDate.startsWith(monthFilter) : true;
+            return matchesStatus && matchesMonth;
+        });
 
     // Sorting Logic
     const sortedProperties = [...availableProperties].sort((a, b) => {
@@ -59,6 +64,17 @@ export const Marketplace: React.FC = () => {
                     <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap">
                         {availableProperties.length} disponíveis
                     </span>
+
+                    {/* Month Filter */}
+                    <div className="w-full sm:w-40">
+                        <input
+                            type="month"
+                            value={monthFilter}
+                            onChange={(e) => setMonthFilter(e.target.value)}
+                            className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
+                            title="Filtrar por Mês do Leilão"
+                        />
+                    </div>
 
                     {/* View Toggles - Local State */}
                     <div className="flex bg-gray-200 p-1 rounded-lg">

@@ -208,10 +208,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return properties.find(p => p.url.trim() === url.trim());
   };
 
-  const addProperty = async (url: string, modality: AuctionModality, auctionDate: string, title?: string): Promise<void> => {
+  const addProperty = async (
+    url: string,
+    modality: AuctionModality,
+    auctionDate: string,
+    title?: string,
+    initialAnalysisData?: Partial<PropertyAnalysisData>
+  ): Promise<void> => {
     if (!currentUser) return;
 
-    const { success, error } = await propertyService.add(url, modality, auctionDate, title, currentUser.id);
+    const { success, error } = await propertyService.add(url, modality, auctionDate, title, currentUser.id, initialAnalysisData);
     if (error) {
       alert(error);
       return;

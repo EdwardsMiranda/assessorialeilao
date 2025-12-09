@@ -98,7 +98,7 @@ export const AdminOpportunities: React.FC = () => {
                     {/* Month Filter */}
                     <div className="w-full md:w-48">
                         <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                            <Calendar className="w-3 h-3" /> Mês de Referência
+                            <Calendar className="w-3 h-3" /> Mês do Leilão
                         </label>
                         <input
                             type="month"
