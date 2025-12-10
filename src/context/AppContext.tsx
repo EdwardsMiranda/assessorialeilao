@@ -23,7 +23,7 @@ interface AppContextType {
 
   // Properties & Files
   findPropertyByUrl: (url: string) => Property | undefined;
-  addProperty: (url: string, modality: AuctionModality, auctionDate: string, title?: string) => Promise<void>;
+  addProperty: (url: string, modality: AuctionModality, auctionDate: string, title?: string, initialAnalysisData?: Partial<PropertyAnalysisData>) => Promise<void>;
   addProperties: (items: Array<{ url: string, modality: AuctionModality, auctionDate: string, title: string }>) => Promise<void>;
   claimProperty: (propertyId: string) => Promise<boolean>;
   updateStatus: (
