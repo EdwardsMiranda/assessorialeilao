@@ -268,7 +268,7 @@ export const propertyService = {
                     .upsert({
                         property_id: propertyId,
                         ...mapAnalysisDataToDb(analysisData),
-                    });
+                    }, { onConflict: 'property_id' });
 
                 if (analysisError) {
                     return { success: false, error: analysisError.message };
