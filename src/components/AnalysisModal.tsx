@@ -434,7 +434,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
         }
     };
 
-    const handleSave = (status: AnalysisStatus) => {
+    const handleSave = async (status: AnalysisStatus) => {
         const finalMetrics = calculateMetrics(formData.initialBid || 0);
 
         // Sanitize date fields to avoid "invalid input syntax for type date: ''"
