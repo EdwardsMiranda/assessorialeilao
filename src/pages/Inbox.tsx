@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { AuctionModality } from '../types';
-import { Plus, Link as LinkIcon, Building, Calendar, FileSpreadsheet, Upload, Download, AlertTriangle, CheckCircle, Copy, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Link as LinkIcon, Building, Calendar, FileSpreadsheet, Upload, Download, AlertTriangle, CheckCircle, Copy } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { extractDataFromUrl } from '../services/geminiService';
 
@@ -17,8 +17,7 @@ export const Inbox: React.FC = () => {
     const [auctionDate, setAuctionDate] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
 
-    // AI Auto-fill State
-    const [isAiLoading, setIsAiLoading] = useState(false);
+
     const [cityState, setCityState] = useState('');
     const [condoName, setCondoName] = useState('');
     const [privateArea, setPrivateArea] = useState<number | ''>('');
@@ -81,36 +80,7 @@ export const Inbox: React.FC = () => {
         confirmManualAdd();
     };
 
-    const handleAiFill = async () => {
-        if (!url) {
-            alert("Por favor, insira o link do imóvel primeiro.");
-            return;
-        }
 
-        setIsAiLoading(true);
-        try {
-            const data = await extractDataFromUrl(url);
-            if (data) {
-                if (data.cityState) setCityState(data.cityState);
-                if (data.condoName) setCondoName(data.condoName);
-                if (data.privateArea) setPrivateArea(data.privateArea);
-                if (data.initialBid) setInitialBid(data.initialBid);
-                if (data.bankValuation) setBankValuation(data.bankValuation);
-
-                // Suggest title if empty
-                if (!title && data.cityState) {
-                    setTitle(`Oportunidade em ${data.cityState}`);
-                }
-            } else {
-                alert("Não foi possível extrair dados automaticamente deste link. Tente preencher manualmente.");
-            }
-        } catch (error) {
-            console.error(error);
-            alert("Erro ao tentar extrair dados.");
-        } finally {
-            setIsAiLoading(false);
-        }
-    };
 
     // --- CSV / XLSX Logic ---
 
@@ -383,25 +353,16 @@ export const Inbox: React.FC = () => {
                                                 placeholder="https://site-do-leiloeiro.com.br/lote/..."
                                             />
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={handleAiFill}
-                                            disabled={isAiLoading || !url}
-                                            className="px-4 py-2 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                                            <span className="text-sm font-medium">Preencher com IA</span>
-                                        </button>
                                     </div>
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Cole o link e clique no botão mágico para preencher os campos abaixo automaticamente.
+                                        Cole o link do imóvel para referência.
                                     </p>
                                 </div>
 
                                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
                                     <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                                        <Sparkles className="w-4 h-4 text-purple-500" />
-                                        Dados do Imóvel (Opcional / IA)
+                                        <Building className="w-4 h-4 text-gray-500" />
+                                        Dados do Imóvel (Opcional)
                                     </h3>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
