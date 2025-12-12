@@ -282,9 +282,10 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Run ONCE on mount
 
-    const handleCloseAndSave = () => {
+    const handleCloseAndSave = async () => {
         // Auto-save on closing, unless it's strictly read-only mode
         if (!isReadOnly) {
+            setIsThinking(true); // Visual feedback
             const finalMetrics = calculateMetrics(formData.initialBid || 0);
 
             // Sanitize
@@ -305,7 +306,8 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
             };
 
             // Maintain current status, just save data
-            updateStatus(property.id, property.status, undefined, abortReason, aiAnalysis, dataToSave);
+            await updateStatus(property.id, property.status, undefined, abortReason, aiAnalysis, dataToSave);
+            setIsThinking(false);
         }
         onClose();
     };
@@ -438,11 +440,11 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
         // Sanitize date fields to avoid "invalid input syntax for type date: ''"
         const sanitizedFormData = { ...formData };
         if (sanitizedFormData.homologationDate === '') {
-            // @ts-ignore - Sending null to Supabase for date column
+            // @ts-ignore
             sanitizedFormData.homologationDate = null;
         }
         if (sanitizedFormData.lastOwnerRegistryDate === '') {
-            // @ts-ignore - Sending null to Supabase for date column
+            // @ts-ignore
             sanitizedFormData.lastOwnerRegistryDate = null;
         }
 
@@ -452,7 +454,11 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
             finalNetProfit: finalMetrics.netProfit
         };
 
-        updateStatus(property.id, status, undefined, status === AnalysisStatus.ABORTADO ? abortReason : undefined, aiAnalysis, dataToSave);
+        // If explicitly completing analysis, we might want to check required fields?
+        // But preventing data loss is key.
+
+        await updateStatus(property.id, status, undefined, abortReason, aiAnalysis, dataToSave);
+        setIsThinking(false);
         if (isEditingMode) setIsEditingMode(false);
         onClose();
     };
