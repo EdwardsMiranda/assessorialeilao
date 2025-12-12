@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AnalysisStatus, Property } from '../types';
+import { formatDate } from '../utils/formatters';
 import { ExternalLink, Edit, CheckCircle2, XCircle, Search, Calendar, CheckSquare } from 'lucide-react';
 import { AnalysisModal } from '../components/AnalysisModal';
 
@@ -165,7 +166,7 @@ export const MyWork: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">
-                      {new Date(prop.auctionDate).toLocaleDateString('pt-BR')}
+                      {formatDate(prop.auctionDate)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {prop.modality}

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AnalysisStatus } from '../types';
+import { formatDate } from '../utils/formatters';
 import { Trophy, Calendar, DollarSign, User, TrendingUp, MapPin, Briefcase, Search, ArrowUpDown, CalendarCheck, AlertOctagon } from 'lucide-react';
 
 export const SoldProperties: React.FC = () => {
@@ -166,7 +167,7 @@ export const SoldProperties: React.FC = () => {
                             <div key={prop.id} className={`bg-white rounded-xl shadow-sm border p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden transition-all ${alertPayment ? 'border-red-300 ring-2 ring-red-100' : 'border-yellow-200'}`}>
                                 {/* Ribbon */}
                                 <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-bl-lg shadow-sm">
-                                    ARREMATADO EM {prop.soldDate ? new Date(prop.soldDate).toLocaleDateString('pt-BR') : 'Data N/D'}
+                                    ARREMATADO EM {prop.soldDate ? formatDate(prop.soldDate) : 'Data N/D'}
                                 </div>
 
                                 {/* Payment Alert Badge */}
@@ -180,10 +181,10 @@ export const SoldProperties: React.FC = () => {
                                     <h3 className="text-xl font-bold text-gray-900 pr-32">{prop.title}</h3>
                                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                                         <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {prop.analysisData?.cityState}</span>
-                                        <span className="flex items-center gap-1" title="Data do Leilão"><Calendar className="w-4 h-4" /> Leilão: {new Date(prop.auctionDate).toLocaleDateString('pt-BR')}</span>
+                                        <span className="flex items-center gap-1" title="Data do Leilão"><Calendar className="w-4 h-4" /> Leilão: {formatDate(prop.auctionDate)}</span>
                                         {prop.analysisData?.homologationDate && (
                                             <span className={`flex items-center gap-1 font-medium px-2 py-0.5 rounded border ${alertPayment ? 'text-red-700 bg-red-50 border-red-100' : 'text-purple-700 bg-purple-50 border-purple-100'}`} title="Data de Homologação">
-                                                <CalendarCheck className="w-4 h-4" /> Homologação: {new Date(prop.analysisData.homologationDate).toLocaleDateString('pt-BR')}
+                                                <CalendarCheck className="w-4 h-4" /> Homologação: {formatDate(prop.analysisData.homologationDate)}
                                             </span>
                                         )}
                                     </div>

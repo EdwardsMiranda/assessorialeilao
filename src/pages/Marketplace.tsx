@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AnalysisStatus } from '../types';
 import { Hand, ExternalLink, Calendar, AlertCircle, ArrowUpDown, LayoutGrid, List } from 'lucide-react';
+import { formatDate } from '../utils/formatters';
 
 export const Marketplace: React.FC = () => {
     const { properties, claimProperty } = useApp();
@@ -142,10 +143,10 @@ export const Marketplace: React.FC = () => {
 
                                             <div className={`flex items-center gap-2 text-sm mb-3 ${urgent ? 'text-red-700 font-medium' : 'text-gray-600'}`}>
                                                 <Calendar className="w-4 h-4" />
-                                                <span>Leilão: {new Date(prop.auctionDate).toLocaleDateString('pt-BR')}</span>
+                                                <span>Leilão: {formatDate(prop.auctionDate)}</span>
                                             </div>
                                             <div className="text-xs text-gray-400 mb-3">
-                                                Adicionado em: {new Date(prop.addedAt).toLocaleDateString('pt-BR')}
+                                                Adicionado em: {formatDate(prop.addedAt)}
                                             </div>
 
                                             <a
@@ -207,12 +208,12 @@ export const Marketplace: React.FC = () => {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <div className={`text-sm ${urgent ? 'text-red-700 font-bold' : 'text-gray-600'}`}>
-                                                            {new Date(prop.auctionDate).toLocaleDateString('pt-BR')}
+                                                            {formatDate(prop.auctionDate)}
                                                             {urgent && <span className="ml-2 text-[10px] bg-red-100 px-1 rounded border border-red-200">URGENTE</span>}
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        {new Date(prop.addedAt).toLocaleDateString('pt-BR')}
+                                                        {formatDate(prop.addedAt)}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-right">
                                                         <button

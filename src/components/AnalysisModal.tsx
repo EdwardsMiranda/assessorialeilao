@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { Property, AnalysisStatus, AuctionModality, PropertyAnalysisData, ComparableItem } from '../types';
 import { useApp } from '../context/AppContext';
 import { X, AlertTriangle, CheckCircle, BrainCircuit, ExternalLink, Calendar, FileText, Scale, MapPin, Search, Calculator, Plus, Trash2, DollarSign, CalendarDays, ChevronDown, ChevronUp, Eye, Percent, Gavel, Edit, Sparkles, ImagePlus, RefreshCw, Check, XCircle } from 'lucide-react';
+import { formatDate } from '../utils/formatters';
 import { analyzePropertyRisks, extractDataFromImage, extractEditalData, analyzeRegistryFile, getItbiRate, extractDataFromUrl } from '../services/geminiService';
 
 interface AnalysisModalProps {
@@ -704,7 +705,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                         <div className="flex items-center gap-4 mt-1 text-sm">
                             <span className="text-gray-600 flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
-                                Leilão Original: {new Date(property.auctionDate).toLocaleDateString('pt-BR')}
+                                Leilão Original: {formatDate(property.auctionDate)}
                             </span>
                             {isFinalized && !isEditingMode && (
                                 <span className="text-gray-400 text-xs">Modo Leitura</span>

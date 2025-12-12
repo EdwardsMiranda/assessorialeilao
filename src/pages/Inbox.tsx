@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { AuctionModality } from '../types';
 import { Plus, Link as LinkIcon, Building, Calendar, FileSpreadsheet, Upload, Download, AlertTriangle, CheckCircle, Copy } from 'lucide-react';
+import { formatDate } from '../utils/formatters';
 import * as XLSX from 'xlsx';
 
 
@@ -232,7 +233,7 @@ export const Inbox: React.FC = () => {
 
                         <div className="bg-gray-50 p-3 rounded border border-gray-200 text-sm space-y-2 mb-6">
                             <p><strong>Status:</strong> {existingProp.status}</p>
-                            <p><strong>Data Leilão:</strong> {new Date(existingProp.auctionDate).toLocaleDateString('pt-BR')}</p>
+                            <p><strong>Data Leilão:</strong> {formatDate(existingProp.auctionDate)}</p>
                             {existingProp.assignedTo && (
                                 <p><strong>Analista:</strong> {existingProp.assignedTo}</p>
                             )}
