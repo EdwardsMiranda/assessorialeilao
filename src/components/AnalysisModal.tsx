@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import { Property, AnalysisStatus, AuctionModality, PropertyAnalysisData, ComparableItem } from '../types';
 import { useApp } from '../context/AppContext';
 import { X, AlertTriangle, CheckCircle, BrainCircuit, ExternalLink, Calendar, FileText, Scale, MapPin, Search, Calculator, Plus, Trash2, DollarSign, CalendarDays, ChevronDown, ChevronUp, Eye, Percent, Gavel, Edit, Sparkles, ImagePlus, RefreshCw, Check, XCircle } from 'lucide-react';
-import { analyzePropertyRisks, extractDataFromImage, extractEditalData, analyzeRegistryFile, getItbiRate } from '../services/geminiService';
+import { analyzePropertyRisks, extractDataFromImage, extractEditalData, analyzeRegistryFile, getItbiRate, extractDataFromUrl } from '../services/geminiService';
 
 interface AnalysisModalProps {
     property: Property;
@@ -137,6 +137,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
     const [showCalcDetails, setShowCalcDetails] = useState(false);
     const [showMaxBidSim, setShowMaxBidSim] = useState(false);
     const [isEditingMode, setIsEditingMode] = useState(false);
+    const [isAutoFillThinking, setIsAutoFillThinking] = useState(false);
 
     // AI Feedback States
     const [visionFeedback, setVisionFeedback] = useState<FeedbackState | null>(null);
@@ -236,6 +237,77 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
         setAiAnalysis(result);
         updateStatus(property.id, property.status, undefined, abortReason, result, formData);
         setIsThinking(false);
+    };
+
+    // Auto-fill on Open
+    React.useEffect(() => {
+        const attemptAutoFill = async () => {
+            // Only run if:
+            // 1. Not finalized (or is editing)
+            // 2. property.url exists
+            // 3. We haven't filled main fields yet (avoid overwriting user work)
+            const isFreshAnalysis = !formData.cityState && !formData.privateArea && !formData.initialBid;
+
+            if (property.url && isFreshAnalysis && !isFinalized && !isReadOnly && !isAutoFillThinking) {
+                console.log("Iniciando auto-preenchimento via URL...");
+                setIsAutoFillThinking(true);
+                try {
+                    const data = await extractDataFromUrl(property.url);
+                    if (data) {
+                        setFormData(prev => ({
+                            ...prev,
+                            cityState: data.cityState || prev.cityState,
+                            condoName: data.condoName || prev.condoName,
+                            privateArea: data.privateArea || prev.privateArea,
+                            initialBid: data.initialBid || prev.initialBid,
+                            bankValuation: data.bankValuation || prev.bankValuation
+                        }));
+
+                        // If city found, trigger ITBI
+                        if (data.cityState) {
+                            getItbiRate(data.cityState).then(rate => {
+                                if (rate) setFormData(prev => ({ ...prev, itbiRate: rate }));
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.error("Erro no auto-preenchimento:", err);
+                } finally {
+                    setIsAutoFillThinking(false);
+                }
+            }
+        };
+
+        attemptAutoFill();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run ONCE on mount
+
+    const handleCloseAndSave = () => {
+        // Auto-save on closing, unless it's strictly read-only mode
+        if (!isReadOnly) {
+            const finalMetrics = calculateMetrics(formData.initialBid || 0);
+
+            // Sanitize
+            const sanitizedFormData = { ...formData };
+            if (sanitizedFormData.homologationDate === '') {
+                // @ts-ignore
+                sanitizedFormData.homologationDate = null;
+            }
+            if (sanitizedFormData.lastOwnerRegistryDate === '') {
+                // @ts-ignore
+                sanitizedFormData.lastOwnerRegistryDate = null;
+            }
+
+            const dataToSave = {
+                ...sanitizedFormData,
+                finalRoi: finalMetrics.roi,
+                finalNetProfit: finalMetrics.netProfit
+            };
+
+            // Maintain current status, just save data
+            updateStatus(property.id, property.status, undefined, abortReason, aiAnalysis, dataToSave);
+        }
+        onClose();
     };
 
     // AI Auto Fill Handlers - Now also Saving the File
@@ -639,7 +711,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                             )}
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-200 text-gray-500">
+                    <button onClick={handleCloseAndSave} className="p-2 rounded-full hover:bg-gray-200 text-gray-500">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -688,7 +760,10 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                 {/* Section 1: Basic Identification */}
                                 <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm relative">
                                     <div className="flex justify-between items-center mb-4 border-b pb-2">
-                                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Identificação do Imóvel</h4>
+                                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide flex items-center gap-2">
+                                            Identificação do Imóvel
+                                            {isAutoFillThinking && <span className="text-[10px] text-blue-600 animate-pulse font-normal flex items-center gap-1"><Sparkles className="w-3 h-3" /> IA lendo link...</span>}
+                                        </h4>
                                         {!isReadOnly && (
                                             <div>
                                                 <button
