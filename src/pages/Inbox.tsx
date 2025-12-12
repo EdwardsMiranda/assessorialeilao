@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext';
 import { AuctionModality } from '../types';
 import { Plus, Link as LinkIcon, Building, Calendar, FileSpreadsheet, Upload, Download, AlertTriangle, CheckCircle, Copy } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { extractDataFromUrl } from '../services/geminiService';
+
 
 export const Inbox: React.FC = () => {
     const { addProperty, addProperties, findPropertyByUrl } = useApp();
