@@ -149,6 +149,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
     const registryInputRef = useRef<HTMLInputElement>(null);
 
     // Form Data State
+    console.log('[MODAL INIT] property.analysisData:', property.analysisData);
     const [formData, setFormData] = useState<PropertyAnalysisData>(property.analysisData || {
         cityState: '',
         condoName: '',

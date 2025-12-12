@@ -20,6 +20,7 @@ export const propertyService = {
             }
 
             // Map database properties to app Property type
+            console.log('[PROPERTY SERVICE] Raw data from Supabase:', data?.[0]); // Debug log
             const properties: Property[] = data.map(p => ({
                 id: p.id,
                 url: p.url,
