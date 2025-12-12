@@ -263,15 +263,39 @@ export const propertyService = {
 
             // Update analysis data if provided
             if (analysisData) {
-                const { error: analysisError } = await supabase
+                // Check if analysis exists
+                const { data: existingAnalysis, error: fetchError } = await supabase
                     .from('property_analysis')
-                    .upsert({
-                        property_id: propertyId,
-                        ...mapAnalysisDataToDb(analysisData),
-                    }, { onConflict: 'property_id' });
+                    .select('id')
+                    .eq('property_id', propertyId);
 
-                if (analysisError) {
-                    return { success: false, error: analysisError.message };
+                if (fetchError) {
+                    console.error('Error checking existing analysis:', fetchError);
+                    return { success: false, error: fetchError.message };
+                }
+
+                if (existingAnalysis && existingAnalysis.length > 0) {
+                    // Update ALL existing records to ensure consistency
+                    const { error: analysisError } = await supabase
+                        .from('property_analysis')
+                        .update(mapAnalysisDataToDb(analysisData))
+                        .eq('property_id', propertyId);
+
+                    if (analysisError) {
+                        return { success: false, error: analysisError.message };
+                    }
+                } else {
+                    // Insert new
+                    const { error: analysisError } = await supabase
+                        .from('property_analysis')
+                        .insert({
+                            property_id: propertyId,
+                            ...mapAnalysisDataToDb(analysisData),
+                        });
+
+                    if (analysisError) {
+                        return { success: false, error: analysisError.message };
+                    }
                 }
             }
 
