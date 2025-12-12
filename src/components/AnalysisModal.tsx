@@ -149,7 +149,6 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
     const registryInputRef = useRef<HTMLInputElement>(null);
 
     // Form Data State
-    console.log('[MODAL INIT] property.analysisData:', property.analysisData);
     const [formData, setFormData] = useState<PropertyAnalysisData>(property.analysisData || {
         cityState: '',
         condoName: '',
@@ -249,21 +248,10 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
             // 3. We haven't filled main fields yet (avoid overwriting user work)
             const isFreshAnalysis = !formData.cityState && !formData.privateArea && !formData.initialBid;
 
-            console.log('[AUTO-FILL] Checking conditions:', {
-                hasUrl: !!property.url,
-                isFreshAnalysis,
-                isFinalized,
-                isReadOnly,
-                isAutoFillThinking,
-                formData: { cityState: formData.cityState, privateArea: formData.privateArea, initialBid: formData.initialBid }
-            });
-
             if (property.url && isFreshAnalysis && !isFinalized && !isReadOnly && !isAutoFillThinking) {
-                console.log("[AUTO-FILL] Iniciando auto-preenchimento via URL:", property.url);
                 setIsAutoFillThinking(true);
                 try {
                     const data = await extractDataFromUrl(property.url);
-                    console.log('[AUTO-FILL] Dados extraídos:', data);
                     if (data) {
                         setFormData(prev => ({
                             ...prev,
@@ -273,7 +261,6 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                             initialBid: data.initialBid || prev.initialBid,
                             bankValuation: data.bankValuation || prev.bankValuation
                         }));
-                        console.log('[AUTO-FILL] Dados aplicados ao formulário');
 
                         // If city found, trigger ITBI
                         if (data.cityState) {
@@ -285,12 +272,10 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                         console.warn('[AUTO-FILL] Nenhum dado foi extraído da URL');
                     }
                 } catch (err) {
-                    console.error("[AUTO-FILL] Erro no auto-preenchimento:", err);
+                    // console.error("[AUTO-FILL] Erro no auto-preenchimento:", err); // Removed debug log
                 } finally {
                     setIsAutoFillThinking(false);
                 }
-            } else {
-                console.log('[AUTO-FILL] Condições não atendidas, pulando auto-fill');
             }
         };
 
@@ -299,7 +284,6 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
     }, []); // Run ONCE on mount
 
     const handleCloseAndSave = async () => {
-        console.log('[SAVE] handleCloseAndSave iniciado');
         const finalMetrics = calculateMetrics(formData.initialBid || 0);
 
         // Sanitize date fields
@@ -319,10 +303,8 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
             finalNetProfit: finalMetrics.netProfit
         };
 
-        console.log('[SAVE] Dados a serem salvos:', dataToSave);
         setIsThinking(true);
         await updateStatus(property.id, property.status, undefined, abortReason, aiAnalysis, dataToSave);
-        console.log('[SAVE] updateStatus concluído');
         setIsThinking(false);
         onClose();
     };
@@ -450,7 +432,6 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
     };
 
     const handleSave = async (status: AnalysisStatus) => {
-        console.log('[SAVE] handleSave iniciado com status:', status);
         const finalMetrics = calculateMetrics(formData.initialBid || 0);
 
         // Sanitize date fields to avoid "invalid input syntax for type date: ''"
@@ -470,13 +451,10 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
             finalNetProfit: finalMetrics.netProfit
         };
 
-        console.log('[SAVE] Dados a serem salvos:', dataToSave);
-
         // If explicitly completing analysis, we might want to check required fields?
         // But preventing data loss is key.
 
         await updateStatus(property.id, status, undefined, abortReason, aiAnalysis, dataToSave);
-        console.log('[SAVE] updateStatus concluído');
         setIsThinking(false);
         if (isEditingMode) setIsEditingMode(false);
         onClose();

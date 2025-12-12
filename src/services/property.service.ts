@@ -20,7 +20,6 @@ export const propertyService = {
             }
 
             // Map database properties to app Property type
-            console.log('[PROPERTY SERVICE] Raw data from Supabase:', JSON.stringify(data?.[0], null, 2)); // Debug log
             const properties: Property[] = data.map(p => ({
                 id: p.id,
                 url: p.url,
@@ -34,7 +33,7 @@ export const propertyService = {
                 notes: p.notes || '',
                 abortReason: p.abort_reason || undefined,
                 aiAnalysis: p.ai_analysis || undefined,
-                analysisData: p.property_analysis?.[0] ? mapAnalysisData(p.property_analysis[0]) : undefined,
+                analysisData: p.property_analysis ? mapAnalysisData(p.property_analysis) : undefined,
                 managerDispatch: p.manager_dispatch || undefined,
                 lastEditedAt: p.last_edited_at || undefined,
                 soldDate: p.sold_date || undefined,
@@ -80,7 +79,7 @@ export const propertyService = {
                 notes: data.notes || '',
                 abortReason: data.abort_reason || undefined,
                 aiAnalysis: data.ai_analysis || undefined,
-                analysisData: data.property_analysis?.[0] ? mapAnalysisData(data.property_analysis[0]) : undefined,
+                analysisData: data.property_analysis ? mapAnalysisData(data.property_analysis) : undefined,
                 managerDispatch: data.manager_dispatch || undefined,
                 lastEditedAt: data.last_edited_at || undefined,
                 soldDate: data.sold_date || undefined,
@@ -264,14 +263,12 @@ export const propertyService = {
 
             // Save analysis data if provided
             if (analysisData) {
-                console.log('[UPDATE STATUS] Saving analysisData:', analysisData);
                 // Check if analysis already exists
                 const { data: existingAnalysis, error: fetchError } = await supabase
                     .from('property_analysis')
                     .select('id')
                     .eq('property_id', propertyId);
 
-                console.log('[UPDATE STATUS] Existing analysis:', existingAnalysis);
                 if (fetchError) {
                     console.error('Error checking existing analysis:', fetchError);
                     return { success: false, error: fetchError.message };
@@ -279,20 +276,16 @@ export const propertyService = {
 
                 if (existingAnalysis && existingAnalysis.length > 0) {
                     // Update ALL existing records to ensure consistency
-                    console.log('[UPDATE STATUS] Updating existing analysis');
                     const { error: analysisError } = await supabase
                         .from('property_analysis')
                         .update(mapAnalysisDataToDb(analysisData))
                         .eq('property_id', propertyId);
 
                     if (analysisError) {
-                        console.error('[UPDATE STATUS] Update error:', analysisError);
                         return { success: false, error: analysisError.message };
                     }
-                    console.log('[UPDATE STATUS] Update successful');
                 } else {
                     // Insert new
-                    console.log('[UPDATE STATUS] Inserting new analysis');
                     const { error: analysisError } = await supabase
                         .from('property_analysis')
                         .insert({
@@ -301,10 +294,8 @@ export const propertyService = {
                         });
 
                     if (analysisError) {
-                        console.error('[UPDATE STATUS] Insert error:', analysisError);
                         return { success: false, error: analysisError.message };
                     }
-                    console.log('[UPDATE STATUS] Insert successful');
                 }
             }
 
