@@ -104,7 +104,7 @@ export interface PropertyAnalysisData {
   condoDebt: number;         // 4) Dívida condomínio levantada
   iptuDebt: number;          // 5) Dívida IPTU levantada
   iptuDebtPrint: string;     // 6) Print dívida IPTU
-  
+
   // Financiamento Avançado
   financingRate: number;     // Taxa de juros anual (CET)
   financingTerm: number;     // Prazo em meses
@@ -132,7 +132,7 @@ export interface Property {
   id: string;
   url: string;
   modality: AuctionModality;
-  auctionDate: string; // ISO Date string (YYYY-MM-DD)
+  auctionDate: string; // ISO Date string (YYYY-MM-DD), can be empty for Venda Direta
   status: AnalysisStatus;
   assignedTo: string | null; // User ID
   addedBy: string; // User ID
@@ -141,10 +141,10 @@ export interface Property {
   abortReason?: string;
   aiAnalysis?: string;
   title?: string;
-  
+
   // Dados do formulário de análise
   analysisData?: PropertyAnalysisData;
-  
+
   // Dados de gestão (Envio)
   managerDispatch?: ManagerDispatch;
 

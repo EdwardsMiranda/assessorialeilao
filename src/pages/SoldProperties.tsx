@@ -30,13 +30,17 @@ export const SoldProperties: React.FC = () => {
             const analystMatch = getAnalystName(p.assignedTo).toLowerCase().includes(searchLower);
 
             // Month Filter Logic (Auction Date - As requested)
-            const matchesMonth = monthFilter ? p.auctionDate.startsWith(monthFilter) : true;
+            const matchesMonth = monthFilter ? (p.auctionDate && p.auctionDate.startsWith(monthFilter)) : true;
 
             return (titleMatch || buyerMatch || analystMatch) && matchesMonth;
         })
         .sort((a, b) => {
             switch (sortBy) {
                 case 'auctionDate':
+                    // Handle empty dates - put them at the end
+                    if (!a.auctionDate && !b.auctionDate) return 0;
+                    if (!a.auctionDate) return 1;
+                    if (!b.auctionDate) return -1;
                     return new Date(b.auctionDate).getTime() - new Date(a.auctionDate).getTime(); // Recentes primeiro
                 case 'homologationDate':
                     const dateA = a.analysisData?.homologationDate ? new Date(a.analysisData.homologationDate).getTime() : 0;

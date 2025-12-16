@@ -17,7 +17,7 @@ export const Marketplace: React.FC = () => {
     const availableProperties = properties
         .filter(p => {
             const matchesStatus = p.status === AnalysisStatus.NAO_INICIADO;
-            const matchesMonth = monthFilter ? p.auctionDate.startsWith(monthFilter) : true;
+            const matchesMonth = monthFilter ? (p.auctionDate && p.auctionDate.startsWith(monthFilter)) : true;
             return matchesStatus && matchesMonth;
         });
 
@@ -26,6 +26,10 @@ export const Marketplace: React.FC = () => {
         switch (sortBy) {
             case 'date':
                 // Closest date first
+                // Handle empty dates - put them at the end
+                if (!a.auctionDate && !b.auctionDate) return 0;
+                if (!a.auctionDate) return 1;
+                if (!b.auctionDate) return -1;
                 return new Date(a.auctionDate).getTime() - new Date(b.auctionDate).getTime();
             case 'modality':
                 return a.modality.localeCompare(b.modality);

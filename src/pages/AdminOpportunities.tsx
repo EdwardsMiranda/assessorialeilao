@@ -35,7 +35,7 @@ export const AdminOpportunities: React.FC = () => {
             const cityMatch = p.analysisData?.cityState?.toLowerCase().includes(searchLower) || false;
 
             // Month Filter Logic (Auction Date)
-            const matchesMonth = monthFilter ? p.auctionDate.startsWith(monthFilter) : true;
+            const matchesMonth = monthFilter ? (p.auctionDate && p.auctionDate.startsWith(monthFilter)) : true;
 
             return (titleMatch || cityMatch) && matchesMonth;
         })
@@ -45,7 +45,10 @@ export const AdminOpportunities: React.FC = () => {
                     // Higher ROI first
                     return (b.analysisData?.finalRoi || 0) - (a.analysisData?.finalRoi || 0);
                 case 'date':
-                    // Closest date first
+                    // Handle empty dates - put them at the end
+                    if (!a.auctionDate && !b.auctionDate) return 0;
+                    if (!a.auctionDate) return 1;
+                    if (!b.auctionDate) return -1;
                     return new Date(a.auctionDate).getTime() - new Date(b.auctionDate).getTime();
                 case 'city':
                     return (a.analysisData?.cityState || '').localeCompare(b.analysisData?.cityState || '');

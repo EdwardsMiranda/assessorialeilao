@@ -14,7 +14,7 @@ export const Dashboard: React.FC = () => {
   // 1. Filter properties based on Auction Date
   const filteredProperties = properties.filter(p => {
     if (!monthFilter) return true;
-    return p.auctionDate.startsWith(monthFilter);
+    return p.auctionDate && p.auctionDate.startsWith(monthFilter);
   });
 
   // 2. Calculate Stats locally based on filtered properties
@@ -238,8 +238,8 @@ export const Dashboard: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-bold ${parseFloat(user.abortRate) > 50
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-gray-100 text-gray-800'
                       }`}>
                       {user.abortRate}%
                     </span>

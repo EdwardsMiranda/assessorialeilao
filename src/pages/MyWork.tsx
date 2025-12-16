@@ -25,14 +25,18 @@ export const MyWork: React.FC = () => {
       const matchesSearch = p.title?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
       const matchesStatus = statusFilter === 'all' ? true : p.status === statusFilter;
 
-      // Month Filter Logic (Auction Date)
-      const matchesMonth = monthFilter ? p.auctionDate.startsWith(monthFilter) : true;
+      // Month Filter Logic (Auction Date) - skip empty dates
+      const matchesMonth = monthFilter ? (p.auctionDate && p.auctionDate.startsWith(monthFilter)) : true;
 
       return matchesSearch && matchesStatus && matchesMonth;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'date':
+          // Handle empty dates - put them at the end
+          if (!a.auctionDate && !b.auctionDate) return 0;
+          if (!a.auctionDate) return 1;
+          if (!b.auctionDate) return -1;
           return new Date(a.auctionDate).getTime() - new Date(b.auctionDate).getTime();
         case 'title':
           return (a.title || '').localeCompare(b.title || '');

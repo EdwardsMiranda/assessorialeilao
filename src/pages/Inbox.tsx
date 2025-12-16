@@ -72,7 +72,10 @@ export const Inbox: React.FC = () => {
 
     const handleManualSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!url || !title || !auctionDate) return;
+
+        // Auction date is optional for Venda Direta
+        const isVendaDireta = modality === AuctionModality.VENDA_DIRETA;
+        if (!url || !title || (!isVendaDireta && !auctionDate)) return;
 
         if (checkManualDuplication()) {
             return; // Modal opens
@@ -156,33 +159,37 @@ export const Inbox: React.FC = () => {
                 continue; // Pular duplicados na importação em massa para manter limpo
             }
 
-            // 2. Validate Date
+            // 2. Validate Date (optional for Venda Direta)
+            const modalityEnum = parseModality(cModality);
             let finalDate = cDate;
             const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
-            // Attempt to fix Excel date serial number or DD/MM/YYYY
-            if (!isNaN(Number(cDate)) && Number(cDate) > 40000) {
-                // Excel serial date
-                const dateObj = new Date(Math.round((Number(cDate) - 25569) * 86400 * 1000));
-                finalDate = dateObj.toISOString().split('T')[0];
-            } else if (cDate && cDate.includes('/')) {
-                const parts = cDate.split('/');
-                if (parts.length === 3) {
-                    // Assume DD/MM/YYYY -> YYYY-MM-DD
-                    finalDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            // For Venda Direta, empty date is allowed
+            if (modalityEnum === AuctionModality.VENDA_DIRETA && !cDate) {
+                finalDate = ''; // Allow empty date for Venda Direta
+            } else {
+                // Attempt to fix Excel date serial number or DD/MM/YYYY
+                if (!isNaN(Number(cDate)) && Number(cDate) > 40000) {
+                    // Excel serial date
+                    const dateObj = new Date(Math.round((Number(cDate) - 25569) * 86400 * 1000));
+                    finalDate = dateObj.toISOString().split('T')[0];
+                } else if (cDate && cDate.includes('/')) {
+                    const parts = cDate.split('/');
+                    if (parts.length === 3) {
+                        // Assume DD/MM/YYYY -> YYYY-MM-DD
+                        finalDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+                }
+
+                if (!finalDate || (finalDate.length !== 10 && !dateRegex.test(finalDate))) {
+                    // Data inválida
+                    errors++;
+                    continue;
                 }
             }
 
-            if (!finalDate || (finalDate.length !== 10 && !dateRegex.test(finalDate))) {
-                // Data inválida, mas se tiver URL vamos tentar salvar com data de hoje + 30 dias para não perder o lead? 
-                // Melhor contar como erro para forçar correção.
-                errors++;
-                continue;
-            }
-
             // Gerar Título Automático já que foi removido da planilha
-            const modalityEnum = parseModality(cModality);
-            const generatedTitle = `Oportunidade ${modalityEnum} - ${finalDate}`;
+            const generatedTitle = `Oportunidade ${modalityEnum} - ${finalDate || 'Sem Data'}`;
 
             newItems.push({
                 title: generatedTitle,
@@ -322,14 +329,16 @@ export const Inbox: React.FC = () => {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Data do Leilão</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Data do Leilão {modality === AuctionModality.VENDA_DIRETA && <span className="text-gray-500 text-xs">(Opcional)</span>}
+                                        </label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                 <Calendar className="h-5 w-5 text-gray-400" />
                                             </div>
                                             <input
                                                 type="date"
-                                                required
+                                                required={modality !== AuctionModality.VENDA_DIRETA}
                                                 value={auctionDate}
                                                 onChange={(e) => setAuctionDate(e.target.value)}
                                                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white"
