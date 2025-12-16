@@ -20,26 +20,29 @@ export const propertyService = {
             }
 
             // Map database properties to app Property type
-            const properties: Property[] = data.map(p => ({
-                id: p.id,
-                url: p.url,
-                modality: p.modality as AuctionModality,
-                auctionDate: p.auction_date,
-                status: p.status as AnalysisStatus,
-                assignedTo: p.assigned_to,
-                addedBy: p.added_by,
-                addedAt: p.added_at,
-                title: p.title || undefined,
-                notes: p.notes || '',
-                abortReason: p.abort_reason || undefined,
-                aiAnalysis: p.ai_analysis || undefined,
-                analysisData: p.property_analysis ? mapAnalysisData(p.property_analysis) : undefined,
-                managerDispatch: p.manager_dispatch || undefined,
-                lastEditedAt: p.last_edited_at || undefined,
-                soldDate: p.sold_date || undefined,
-                soldAmount: p.sold_amount || undefined,
-                buyerName: p.buyer_name || undefined,
-            }));
+            const properties: Property[] = data.map(p => {
+                const analysisRaw = Array.isArray(p.property_analysis) ? p.property_analysis[0] : p.property_analysis;
+                return {
+                    id: p.id,
+                    url: p.url,
+                    modality: p.modality as AuctionModality,
+                    auctionDate: p.auction_date,
+                    status: p.status as AnalysisStatus,
+                    assignedTo: p.assigned_to,
+                    addedBy: p.added_by,
+                    addedAt: p.added_at,
+                    title: p.title || undefined,
+                    notes: p.notes || '',
+                    abortReason: p.abort_reason || undefined,
+                    aiAnalysis: p.ai_analysis || undefined,
+                    analysisData: analysisRaw ? mapAnalysisData(analysisRaw) : undefined,
+                    managerDispatch: p.manager_dispatch || undefined,
+                    lastEditedAt: p.last_edited_at || undefined,
+                    soldDate: p.sold_date || undefined,
+                    soldAmount: p.sold_amount || undefined,
+                    buyerName: p.buyer_name || undefined,
+                };
+            });
 
             return { properties, error: null };
         } catch (error) {
@@ -66,6 +69,8 @@ export const propertyService = {
                 return { property: null, error: null }; // Not found is not an error
             }
 
+            const analysisRaw = Array.isArray(data.property_analysis) ? data.property_analysis[0] : data.property_analysis;
+
             const property: Property = {
                 id: data.id,
                 url: data.url,
@@ -79,7 +84,7 @@ export const propertyService = {
                 notes: data.notes || '',
                 abortReason: data.abort_reason || undefined,
                 aiAnalysis: data.ai_analysis || undefined,
-                analysisData: data.property_analysis ? mapAnalysisData(data.property_analysis) : undefined,
+                analysisData: analysisRaw ? mapAnalysisData(analysisRaw) : undefined,
                 managerDispatch: data.manager_dispatch || undefined,
                 lastEditedAt: data.last_edited_at || undefined,
                 soldDate: data.sold_date || undefined,
