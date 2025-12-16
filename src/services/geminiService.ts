@@ -265,35 +265,6 @@ export const extractDataFromUrl = async (url: string): Promise<{
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    export const expandInvestmentThesis = async (text: string): Promise<string[]> => {
-      const ai = getClient();
-      if (!ai) return [];
-
-      const prompt = `
-    Analise o seguinte texto de uma tese de investimento imobiliário: "${text}".
-    
-    Se houver menção a regiões (ex: "Grande SP", "Litoral Norte", "Região dos Lagos"), retorne uma lista com os principais nomes de cidades que compõem essa região.
-    Se houver nomes de cidades explícitos, inclua-os.
-    Se houver estados (ex: "SP", "Rio de Janeiro"), retorne as principais cidades desse estado (limitado a 10 principais).
-
-    Retorne APENAS um JSON array de strings, sem markdown ou explicações. 
-    Exemplo: ["Santos", "Guarujá", "Praia Grande"]
-  `;
-
-      try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: [{ parts: [{ text: prompt }] }]
-        });
-
-        const resultText = response.response.text();
-        const cleanJson = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(cleanJson);
-      } catch (error) {
-        console.error("Erro ao expandir tese:", error);
-        return [];
-      }
-    };
     const text = aiResponse.text || "{}";
     const jsonStr = text.replace(/```json|```/g, '').trim();
     return JSON.parse(jsonStr);
@@ -332,7 +303,7 @@ export const expandInvestmentThesis = async (text: string): Promise<string[]> =>
       contents: [{ parts: [{ text: prompt }] }]
     });
 
-    const resultText = response.response.text();
+    const resultText = response.text || "[]";
     const cleanJson = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(cleanJson);
   } catch (error) {

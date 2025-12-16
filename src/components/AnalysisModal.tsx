@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Property, AnalysisStatus, AuctionModality, PropertyAnalysisData, ComparableItem } from '../types';
 import { useApp } from '../context/AppContext';
 import { X, AlertTriangle, CheckCircle, BrainCircuit, ExternalLink, Calendar, FileText, Scale, MapPin, Search, Calculator, Plus, Trash2, DollarSign, CalendarDays, ChevronDown, ChevronUp, Eye, Percent, Gavel, Edit, Sparkles, ImagePlus, RefreshCw, Check, XCircle, Loader2 } from 'lucide-react';
