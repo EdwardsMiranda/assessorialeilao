@@ -1,14 +1,20 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Property, AnalysisStatus, AuctionModality, PropertyAnalysisData, ComparableItem } from '../types';
 import { useApp } from '../context/AppContext';
-import { X, AlertTriangle, CheckCircle, BrainCircuit, ExternalLink, Calendar, FileText, Scale, MapPin, Search, Calculator, Plus, Trash2, DollarSign, CalendarDays, ChevronDown, ChevronUp, Eye, Percent, Gavel, Edit, Sparkles, ImagePlus, RefreshCw, Check, XCircle } from 'lucide-react';
+import { X, AlertTriangle, CheckCircle, BrainCircuit, ExternalLink, Calendar, FileText, Scale, MapPin, Search, Calculator, Plus, Trash2, DollarSign, CalendarDays, ChevronDown, ChevronUp, Eye, Percent, Gavel, Edit, Sparkles, ImagePlus, RefreshCw, Check, XCircle, Loader2 } from 'lucide-react';
 import { formatDate } from '../utils/formatters';
 import { analyzePropertyRisks, extractDataFromImage, extractEditalData, analyzeRegistryFile, getItbiRate, extractDataFromUrl } from '../services/geminiService';
+import { PDFDocument } from 'pdf-lib';
 
 interface AnalysisModalProps {
     property: Property;
     onClose: () => void;
+}
+
+interface FeedbackState {
+    type: 'success' | 'error';
+    message: string;
 }
 
 // Helper component for "Link or Upload"
@@ -22,7 +28,9 @@ const LinkOrUploadInput = ({
     aiActionLabel = "IA",
     propertyId,
     docType,
-    onFileSelect
+    onFileSelect,
+    feedback, // NEW PROP
+    isThinking // NEW PROP
 }: {
     label?: string,
     value: string,
@@ -33,7 +41,9 @@ const LinkOrUploadInput = ({
     aiActionLabel?: string,
     propertyId: string,
     docType: string,
-    onFileSelect?: (file: File) => void
+    onFileSelect?: (file: File) => void,
+    feedback?: FeedbackState | null, // NEW PROP TYPE
+    isThinking?: boolean // NEW PROP TYPE
 }) => {
     const { uploadDocument } = useApp();
     const [mode, setMode] = useState<'link' | 'upload'>(value.startsWith('[ARQUIVO]') ? 'upload' : 'link');
@@ -48,7 +58,7 @@ const LinkOrUploadInput = ({
             try {
                 // Upload and Rename via Context
                 const newFileName = await uploadDocument(propertyId, file, docType);
-                onChange(`[ARQUIVO] ${newFileName}`);
+                onChange(`[ARQUIVO] ${newFileName} `);
 
                 // Trigger external action (e.g., AI analysis) if provided
                 if (onFileSelect) {
@@ -72,10 +82,10 @@ const LinkOrUploadInput = ({
                         type="button"
                         onClick={onAiAction}
                         className="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200 hover:bg-indigo-100 flex items-center gap-1 transition-colors"
-                        disabled={disabled}
+                        disabled={disabled || isThinking}
                         title="Processar com IA"
                     >
-                        <Sparkles className="w-3 h-3" /> {aiActionLabel}
+                        {isThinking ? <Sparkles className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} {aiActionLabel}
                     </button>
                 )}
             </div>
@@ -83,14 +93,14 @@ const LinkOrUploadInput = ({
                 <button
                     type="button"
                     onClick={() => setMode('link')}
-                    className={`flex-1 py-0.5 text-[10px] rounded border ${mode === 'link' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-500'}`}
+                    className={`flex - 1 py - 0.5 text - [10px] rounded border ${mode === 'link' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-500'} `}
                 >
                     Link
                 </button>
                 <button
                     type="button"
                     onClick={() => setMode('upload')}
-                    className={`flex-1 py-0.5 text-[10px] rounded border ${mode === 'upload' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-500'}`}
+                    className={`flex - 1 py - 0.5 text - [10px] rounded border ${mode === 'upload' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-500'} `}
                 >
                     Upload
                 </button>
@@ -121,6 +131,20 @@ const LinkOrUploadInput = ({
                             <FileText className="w-3 h-3" /> {value.replace('[ARQUIVO] ', '')}
                         </p>
                     )}
+                </div>
+            )}
+            {/* Custom Feedback UI inside Input Component */}
+            {feedback && (
+                <div className={`mt - 2 p - 2 rounded text - xs flex items - center gap - 2 ${feedback.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                    } `}>
+                    {feedback.type === 'success' ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
+                    {feedback.message}
+                </div>
+            )}
+            {/* External Analysis Feedback (Mainly for generic 'Thinking' state if needed) */}
+            {isThinking && (
+                <div className="mt-2 text-xs text-blue-600 flex items-center gap-1 animate-pulse">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Analisando arquivo...
                 </div>
             )}
         </div>
@@ -175,17 +199,12 @@ const CurrencyInput = ({
                 value={displayValue}
                 onChange={handleChange}
                 disabled={disabled}
-                className={`block w-full rounded-md border-gray-300 pl-8 focus:border-blue-500 focus:ring-blue-500 text-xs ${className}`}
+                className={`block w - full rounded - md border - gray - 300 pl - 8 focus: border - blue - 500 focus: ring - blue - 500 text - xs ${className} `}
                 placeholder={placeholder}
             />
         </div>
     );
 };
-
-interface FeedbackState {
-    type: 'success' | 'error';
-    message: string;
-}
 
 export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose }) => {
     const { updateStatus, currentUser, uploadDocument } = useApp();
@@ -372,7 +391,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
             // @ts-ignore
             if (typeof sanitizedFormData[field] === 'number' && sanitizedFormData[field] > MAX_VAL) {
                 // @ts-ignore
-                console.warn(`[AnalysisModal] Field ${field} overflowed (${sanitizedFormData[field]}), capping at ${MAX_VAL}`);
+                console.warn(`[AnalysisModal] Field ${field} overflowed(${sanitizedFormData[field]}), capping at ${MAX_VAL} `);
                 // @ts-ignore
                 sanitizedFormData[field] = MAX_VAL;
             }
@@ -422,7 +441,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                         // We don't have a field for "Mirror Image" here, but we could add if needed
                     }));
 
-                    setVisionFeedback({ type: 'success', message: `Dados lidos e arquivo salvo: ${savedName}` });
+                    setVisionFeedback({ type: 'success', message: `Dados lidos e arquivo salvo: ${savedName} ` });
 
                     // Trigger ITBI fetch automatically if city found
                     if (result.cityState) {
@@ -445,19 +464,49 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
     const processEditalAnalysis = async (file: File) => {
         setIsEditalThinking(true);
         const reader = new FileReader();
+
         reader.onloadend = async () => {
-            const base64String = reader.result as string;
+            let base64String = reader.result as string;
             const mimeType = file.type || 'application/pdf';
+
+            // TRUNCATE PDF IF NEEDED (First 4 pages)
+            if (mimeType === 'application/pdf') {
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdfDoc = await PDFDocument.load(arrayBuffer);
+                    const pageCount = pdfDoc.getPageCount();
+
+                    if (pageCount > 4) {
+                        const newPdf = await PDFDocument.create();
+                        const pages = await newPdf.copyPages(pdfDoc, [0, 1, 2, 3]); // Copy first 4 pages (0-indexed)
+                        pages.forEach(page => newPdf.addPage(page));
+                        const pdfBytes = await newPdf.save();
+
+                        // Convert back to base64
+                        let binary = '';
+                        const len = pdfBytes.byteLength;
+                        for (let i = 0; i < len; i++) {
+                            binary += String.fromCharCode(pdfBytes[i]);
+                        }
+                        base64String = `data: application / pdf; base64, ${btoa(binary)} `;
+                        console.log("PDF Truncated to 4 pages for AI analysis.");
+                    }
+                } catch (err) {
+                    console.error("Error truncating PDF:", err);
+                    // Fallback to original file if truncation fails
+                }
+            }
+
             const result = await extractEditalData(base64String, mimeType);
 
             if (result && result.homologationDate) {
                 setFormData(prev => ({
                     ...prev,
-                    homologationDate: result.homologationDate
+                    homologationDate: result.homologationDate || prev.homologationDate
                 }));
-                alert("Data de Homologação encontrada e preenchida!");
+                // alert("Data de Homologação encontrada e preenchida!");
             } else {
-                alert("Não encontramos uma data explícita. O sistema usará a regra de 2 dias úteis após arremate.");
+                // alert("Não encontramos uma data explícita. O sistema usará a regra de 2 dias úteis após arremate.");
             }
             setIsEditalThinking(false);
         };
@@ -469,7 +518,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
             const file = e.target.files[0];
             // Save file (Manual Trigger)
             const savedName = await uploadDocument(property.id, file, 'EDITAL');
-            updateField('editalLink', `[ARQUIVO] ${savedName}`);
+            updateField('editalLink', `[ARQUIVO] ${savedName} `);
 
             await processEditalAnalysis(file);
         }
@@ -517,7 +566,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
             const file = e.target.files[0];
             // Save File (Manual Trigger)
             const savedName = await uploadDocument(property.id, file, 'MATRICULA');
-            updateField('matriculaFile', `[ARQUIVO] ${savedName}`);
+            updateField('matriculaFile', `[ARQUIVO] ${savedName} `);
 
             await processRegistryAnalysis(file);
         }
@@ -735,7 +784,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
     const modalities = Object.values(AuctionModality);
 
     const getMapsUrl = () => {
-        const fullAddress = `${formData.address}, ${formData.cityState}`;
+        const fullAddress = `${formData.address}, ${formData.cityState} `;
         return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
     };
 
@@ -990,6 +1039,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                                 propertyId={property.id}
                                                 docType="EDITAL"
                                                 onFileSelect={processEditalAnalysis}
+                                                isThinking={isEditalThinking}
                                             />
                                             {isEditalThinking && (
                                                 <p className="text-[10px] text-indigo-600 mt-1 animate-pulse">
@@ -1125,14 +1175,6 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                         <span className="text-purple-700">Análise de Matrícula</span>
                                     </h4>
 
-                                    {/* AI Feedback for Registry */}
-                                    {registryFeedback && (
-                                        <div className={`mb-4 px-3 py-2 rounded flex items-center gap-2 text-xs font-bold border ${registryFeedback.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
-                                            {registryFeedback.type === 'success' ? <Check className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                                            {registryFeedback.message}
-                                        </div>
-                                    )}
-
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                                         <div className="col-span-1 md:col-span-2">
@@ -1145,12 +1187,9 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                                 aiActionLabel="Analisar Documento"
                                                 propertyId={property.id}
                                                 docType="MATRICULA"
+                                                feedback={registryFeedback}
+                                                isThinking={isRegistryThinking}
                                             />
-                                            {isRegistryThinking && (
-                                                <p className="text-xs text-purple-600 mt-1 animate-pulse font-medium">
-                                                    A IA está lendo a matrícula para identificar penhoras e dívidas...
-                                                </p>
-                                            )}
                                         </div>
 
                                         <div className="col-span-1">
