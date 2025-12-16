@@ -210,6 +210,7 @@ export const getItbiRate = async (cityState: string): Promise<number | null> => 
 export const extractDataFromUrl = async (url: string): Promise<{
   cityState: string,
   condoName: string,
+  address: string,
   privateArea: number,
   initialBid: number,
   bankValuation: number
@@ -247,9 +248,10 @@ export const extractDataFromUrl = async (url: string): Promise<{
       
       1. "cityState": Cidade e UF no formato "Cidade-UF".
       2. "condoName": Nome do condomínio/edifício. Se não encontrar, string vazia.
-      3. "privateArea": Área privativa em m² (number).
-      4. "initialBid": Lance Inicial ou Valor Mínimo de Venda (number).
-      5. "bankValuation": Valor de Avaliação do Banco ou Avaliação Total (number).
+      3. "address": O endereço completo (Logradouro, Número, Bairro). REGRA: NÃO inclua complemento, NÃO inclua apto, NÃO inclua CEP.
+      4. "privateArea": Área privativa em m² (number).
+      5. "initialBid": Lance Inicial ou Valor Mínimo de Venda (number).
+      6. "bankValuation": Valor de Avaliação do Banco ou Avaliação Total (number).
 
       Texto da página:
       "${cleanedContent}"

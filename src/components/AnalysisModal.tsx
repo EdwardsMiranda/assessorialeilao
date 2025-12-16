@@ -258,6 +258,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                             ...prev,
                             cityState: data.cityState || prev.cityState,
                             condoName: data.condoName || prev.condoName,
+                            address: data.address || prev.address,
                             privateArea: data.privateArea || prev.privateArea,
                             initialBid: data.initialBid || prev.initialBid,
                             bankValuation: data.bankValuation || prev.bankValuation
