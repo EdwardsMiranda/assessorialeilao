@@ -22,6 +22,7 @@ const LinkOrUploadInput = ({
     aiActionLabel = "IA",
     propertyId,
     docType,
+    onFileSelect
 }: {
     label?: string,
     value: string,
@@ -31,7 +32,8 @@ const LinkOrUploadInput = ({
     onAiAction?: () => void,
     aiActionLabel?: string,
     propertyId: string,
-    docType: string // Type of document for renaming (e.g., "MATRICULA", "EDITAL")
+    docType: string,
+    onFileSelect?: (file: File) => void
 }) => {
     const { uploadDocument } = useApp();
     const [mode, setMode] = useState<'link' | 'upload'>(value.startsWith('[ARQUIVO]') ? 'upload' : 'link');
@@ -47,6 +49,11 @@ const LinkOrUploadInput = ({
                 // Upload and Rename via Context
                 const newFileName = await uploadDocument(propertyId, file, docType);
                 onChange(`[ARQUIVO] ${newFileName}`);
+
+                // Trigger external action (e.g., AI analysis) if provided
+                if (onFileSelect) {
+                    onFileSelect(file);
+                }
             } catch (error) {
                 alert("Erro ao salvar arquivo.");
             } finally {
@@ -59,7 +66,8 @@ const LinkOrUploadInput = ({
         <div className="w-full">
             <div className="flex justify-between items-end mb-1">
                 {label && <label className="block text-xs font-medium text-gray-700">{label}</label>}
-                {onAiAction && (
+                {/* Only show manual AI button if NOT in upload mode (since upload triggers auto) OR if no auto-trigger provided */}
+                {onAiAction && mode === 'link' && (
                     <button
                         type="button"
                         onClick={onAiAction}
@@ -107,7 +115,7 @@ const LinkOrUploadInput = ({
                         disabled={disabled || isUploading}
                         className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 bg-white"
                     />
-                    {isUploading && <span className="text-[10px] text-blue-600 animate-pulse">Enviando e renomeando...</span>}
+                    {isUploading && <span className="text-[10px] text-blue-600 animate-pulse">Enviando e analisando...</span>}
                     {value.startsWith('[ARQUIVO]') && !isUploading && (
                         <p className="mt-1 text-[10px] text-green-600 flex items-center gap-1 truncate" title={value.replace('[ARQUIVO] ', '')}>
                             <FileText className="w-3 h-3" /> {value.replace('[ARQUIVO] ', '')}
@@ -115,6 +123,61 @@ const LinkOrUploadInput = ({
                     )}
                 </div>
             )}
+        </div>
+    );
+};
+
+// Currency Input Component
+const CurrencyInput = ({
+    value,
+    onChange,
+    disabled = false,
+    className = "",
+    placeholder = "R$ 0,00"
+}: {
+    value: number,
+    onChange: (val: number) => void,
+    disabled?: boolean,
+    className?: string,
+    placeholder?: string
+}) => {
+    // Format on render
+    const format = (val: number) => {
+        if (!val) return "";
+        return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+    };
+
+    const [displayValue, setDisplayValue] = useState(format(value));
+
+    // Update display when external value changes
+    React.useEffect(() => {
+        setDisplayValue(format(value));
+    }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const input = e.target.value;
+        // Remove non-digits
+        const digits = input.replace(/\D/g, '');
+
+        // Convert to float (last 2 digits are cents)
+        const realValue = parseFloat(digits) / 100;
+
+        onChange(isNaN(realValue) ? 0 : realValue);
+    };
+
+    return (
+        <div className="relative rounded-md shadow-sm">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <span className="text-gray-500 sm:text-xs">R$</span>
+            </div>
+            <input
+                type="text"
+                value={displayValue}
+                onChange={handleChange}
+                disabled={disabled}
+                className={`block w-full rounded-md border-gray-300 pl-8 focus:border-blue-500 focus:ring-blue-500 text-xs ${className}`}
+                placeholder={placeholder}
+            />
         </div>
     );
 };
@@ -261,7 +324,9 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                             address: data.address || prev.address,
                             privateArea: data.privateArea || prev.privateArea,
                             initialBid: data.initialBid || prev.initialBid,
-                            bankValuation: data.bankValuation || prev.bankValuation
+                            bankValuation: data.bankValuation || prev.bankValuation,
+                            condoDebtRule: data.condoDebtRule || prev.condoDebtRule,
+                            bankMirror: prev.bankMirror || property.url // Auto-fill mirror link with property URL
                         }));
 
                         // If city found, trigger ITBI
@@ -357,79 +422,84 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
         }
     };
 
+    // Shared Analysis Logic (to avoid double upload)
+    const processEditalAnalysis = async (file: File) => {
+        setIsEditalThinking(true);
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const base64String = reader.result as string;
+            const result = await extractEditalData(base64String);
+
+            if (result && result.homologationDate) {
+                setFormData(prev => ({
+                    ...prev,
+                    homologationDate: result.homologationDate
+                }));
+                alert("Data de Homologação encontrada e preenchida!");
+            } else {
+                alert("Não encontramos uma data explícita. O sistema usará a regra de 2 dias úteis após arremate.");
+            }
+            setIsEditalThinking(false);
+        };
+        reader.readAsDataURL(file);
+    };
+
     const handleEditalAutoFill = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setIsEditalThinking(true);
             const file = e.target.files[0];
-
-            // Save file
+            // Save file (Manual Trigger)
             const savedName = await uploadDocument(property.id, file, 'EDITAL');
             updateField('editalLink', `[ARQUIVO] ${savedName}`);
 
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                const base64String = reader.result as string;
-                const result = await extractEditalData(base64String);
-
-                if (result && result.homologationDate) {
-                    setFormData(prev => ({
-                        ...prev,
-                        homologationDate: result.homologationDate
-                    }));
-                    alert("Data de Homologação encontrada e preenchida!");
-                } else {
-                    alert("Não encontramos uma data explícita. O sistema usará a regra de 2 dias úteis após arremate.");
-                }
-                setIsEditalThinking(false);
-            };
-
-            reader.readAsDataURL(file);
+            await processEditalAnalysis(file);
         }
     };
 
-    const handleRegistryAutoFill = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const processRegistryAnalysis = async (file: File) => {
         setRegistryFeedback(null);
-        if (e.target.files && e.target.files[0]) {
-            setIsRegistryThinking(true);
-            const file = e.target.files[0];
+        setIsRegistryThinking(true);
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const base64String = reader.result as string;
+            const mimeType = file.type || 'application/pdf';
+            const result = await analyzeRegistryFile(base64String, mimeType);
 
-            // Save File
+            if (result) {
+                setFormData(prev => ({
+                    ...prev,
+                    criticalImpediment: result.criticalImpediment || prev.criticalImpediment,
+                    bankConsolidation: result.bankConsolidation || prev.bankConsolidation,
+                    cpfPropterRem: result.propterRem || prev.cpfPropterRem,
+                }));
+
+                // Logic for Green/Red Message
+                const isClean =
+                    (result.criticalImpediment === 'Nada Consta') &&
+                    (result.bankConsolidation === 'Não') &&
+                    (result.propterRem === 'Nada Consta');
+
+                if (isClean) {
+                    setRegistryFeedback({ type: 'success', message: 'Lido e nenhuma pendência encontrada.' });
+                } else {
+                    setRegistryFeedback({ type: 'error', message: 'Atenção: Pendências ou riscos identificados.' });
+                }
+
+            } else {
+                setRegistryFeedback({ type: 'error', message: 'Não foi possível ler o documento ou falha na análise.' });
+            }
+            setIsRegistryThinking(false);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleRegistryAutoFill = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            // Save File (Manual Trigger)
             const savedName = await uploadDocument(property.id, file, 'MATRICULA');
             updateField('matriculaFile', `[ARQUIVO] ${savedName}`);
 
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                const base64String = reader.result as string;
-                const mimeType = file.type || 'application/pdf';
-                const result = await analyzeRegistryFile(base64String, mimeType);
-
-                if (result) {
-                    setFormData(prev => ({
-                        ...prev,
-                        criticalImpediment: result.criticalImpediment || prev.criticalImpediment,
-                        bankConsolidation: result.bankConsolidation || prev.bankConsolidation,
-                        cpfPropterRem: result.propterRem || prev.cpfPropterRem,
-                    }));
-
-                    // Logic for Green/Red Message
-                    const isClean =
-                        (result.criticalImpediment === 'Nada Consta') &&
-                        (result.bankConsolidation === 'Não') &&
-                        (result.propterRem === 'Nada Consta');
-
-                    if (isClean) {
-                        setRegistryFeedback({ type: 'success', message: 'Lido e nenhuma pendência encontrada.' });
-                    } else {
-                        setRegistryFeedback({ type: 'error', message: 'Atenção: Pendências ou riscos identificados.' });
-                    }
-
-                } else {
-                    setRegistryFeedback({ type: 'error', message: 'Não foi possível ler o documento ou falha na análise.' });
-                }
-                setIsRegistryThinking(false);
-            };
-
-            reader.readAsDataURL(file);
+            await processRegistryAnalysis(file);
         }
     };
 
@@ -814,13 +884,11 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                         </div>
 
                                         <div className="col-span-1">
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">2) Condomínio</label>
-                                            <input
-                                                type="text"
-                                                value={formData.condoName}
-                                                onChange={e => updateField('condoName', e.target.value)}
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Dívida Condomínio</label>
+                                            <CurrencyInput
+                                                value={formData.condoDebt}
+                                                onChange={val => updateField('condoDebt', val)}
                                                 disabled={isReadOnly}
-                                                className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 bg-white"
                                             />
                                         </div>
 
@@ -833,6 +901,26 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                                 disabled={isReadOnly}
                                                 className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 bg-white"
                                                 placeholder="Rua Exemplo, 123"
+                                            />
+                                        </div>
+
+                                        <div className="col-span-1">
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Valor Venal (Ref. ITBI)</label>
+                                            <CurrencyInput
+                                                value={formData.venalValue}
+                                                onChange={val => updateField('venalValue', val)}
+                                                disabled={isReadOnly}
+                                            />
+                                        </div>
+
+                                        <div className="col-span-1">
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">2) Condomínio</label>
+                                            <input
+                                                type="text"
+                                                value={formData.condoName}
+                                                onChange={e => updateField('condoName', e.target.value)}
+                                                disabled={isReadOnly}
+                                                className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 bg-white"
                                             />
                                         </div>
 
@@ -867,6 +955,15 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                         </div>
 
                                         <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Valor Aluguel Estimado</label>
+                                            <CurrencyInput
+                                                value={formData.rentValue}
+                                                onChange={val => updateField('rentValue', val)}
+                                                disabled={isReadOnly}
+                                            />
+                                        </div>
+
+                                        <div>
                                             <label className="block text-xs font-medium text-gray-700 mb-1">6) Data do Evento</label>
                                             <input
                                                 type="date"
@@ -886,6 +983,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                                 onAiAction={!isReadOnly ? () => editalInputRef.current?.click() : undefined}
                                                 propertyId={property.id}
                                                 docType="EDITAL"
+                                                onFileSelect={processEditalAnalysis}
                                             />
                                             {isEditalThinking && (
                                                 <p className="text-[10px] text-indigo-600 mt-1 animate-pulse">
@@ -931,23 +1029,19 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
 
                                         <div>
                                             <label className="block text-xs font-medium text-gray-700 mb-1">7) Lance Inicial (R$)</label>
-                                            <input
-                                                type="number"
+                                            <CurrencyInput
                                                 value={formData.initialBid}
-                                                onChange={e => updateField('initialBid', parseFloat(e.target.value))}
+                                                onChange={val => updateField('initialBid', val)}
                                                 disabled={isReadOnly}
-                                                className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 bg-white"
                                             />
                                         </div>
 
                                         <div>
                                             <label className="block text-xs font-medium text-gray-700 mb-1">8) Avaliação Banco (R$)</label>
-                                            <input
-                                                type="number"
+                                            <CurrencyInput
                                                 value={formData.bankValuation}
-                                                onChange={e => updateField('bankValuation', parseFloat(e.target.value))}
+                                                onChange={val => updateField('bankValuation', val)}
                                                 disabled={isReadOnly}
-                                                className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 bg-white"
                                             />
                                         </div>
 

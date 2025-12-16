@@ -213,7 +213,8 @@ export const extractDataFromUrl = async (url: string): Promise<{
   address: string,
   privateArea: number,
   initialBid: number,
-  bankValuation: number
+  bankValuation: number,
+  condoDebtRule: boolean
 } | null> => {
   const ai = getClient();
   if (!ai) return null;
@@ -252,6 +253,7 @@ export const extractDataFromUrl = async (url: string): Promise<{
       4. "privateArea": Área privativa em m² (number).
       5. "initialBid": Lance Inicial ou Valor Mínimo de Venda (number).
       6. "bankValuation": Valor de Avaliação do Banco ou Avaliação Total (number).
+      7. "condoDebtRule": (boolean) Retorne true SOMENTE se encontrar texto dizendo que "A CAIXA realizará o pagamento apenas do valor que exceder o limite de 10% do valor de avaliação" ou "Condomínio: Sob responsabilidade do comprador, até o limite de 10%". Caso contrário, false.
 
       Texto da página:
       "${cleanedContent}"
