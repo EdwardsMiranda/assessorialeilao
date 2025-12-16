@@ -341,8 +341,4 @@ export const expandInvestmentThesis = async (text: string): Promise<string[]> =>
   }
 };
 
-  } catch (error) {
-  console.error("Gemini URL Extraction Error:", error);
-  return null;
-}
-};
+
