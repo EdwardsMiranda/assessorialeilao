@@ -364,6 +364,25 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
             sanitizedFormData.lastOwnerRegistryDate = null;
         }
 
+        // Validate numeric fields to prevent overflow
+        const MAX_VAL = 2147483647; // Max signed 32-bit integer (Postgres integer)
+        const numericFields = ['initialBid', 'bankValuation', 'rentValue', 'condoFee', 'venalValue', 'registryValue', 'renovationValue', 'condoDebt', 'iptuDebt', 'monthlyIptu', 'maxBid', 'privateArea'];
+
+        numericFields.forEach(field => {
+            // @ts-ignore
+            if (typeof sanitizedFormData[field] === 'number' && sanitizedFormData[field] > MAX_VAL) {
+                // @ts-ignore
+                console.warn(`[AnalysisModal] Field ${field} overflowed (${sanitizedFormData[field]}), capping at ${MAX_VAL}`);
+                // @ts-ignore
+                sanitizedFormData[field] = MAX_VAL;
+            }
+            // @ts-ignore
+            if (isNaN(sanitizedFormData[field])) {
+                // @ts-ignore
+                sanitizedFormData[field] = 0;
+            }
+        });
+
         const dataToSave = {
             ...sanitizedFormData,
             finalRoi: finalMetrics.roi,
@@ -428,7 +447,8 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
         const reader = new FileReader();
         reader.onloadend = async () => {
             const base64String = reader.result as string;
-            const result = await extractEditalData(base64String);
+            const mimeType = file.type || 'application/pdf';
+            const result = await extractEditalData(base64String, mimeType);
 
             if (result && result.homologationDate) {
                 setFormData(prev => ({
@@ -883,14 +903,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                             />
                                         </div>
 
-                                        <div className="col-span-1">
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">Dívida Condomínio</label>
-                                            <CurrencyInput
-                                                value={formData.condoDebt}
-                                                onChange={val => updateField('condoDebt', val)}
-                                                disabled={isReadOnly}
-                                            />
-                                        </div>
+
 
                                         <div className="col-span-1 md:col-span-2 lg:col-span-3">
                                             <label className="block text-xs font-medium text-gray-700 mb-1">3) Endereço (sem apto/cep/bloco)</label>
@@ -904,14 +917,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                             />
                                         </div>
 
-                                        <div className="col-span-1">
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">Valor Venal (Ref. ITBI)</label>
-                                            <CurrencyInput
-                                                value={formData.venalValue}
-                                                onChange={val => updateField('venalValue', val)}
-                                                disabled={isReadOnly}
-                                            />
-                                        </div>
+
 
                                         <div className="col-span-1">
                                             <label className="block text-xs font-medium text-gray-700 mb-1">2) Condomínio</label>

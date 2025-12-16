@@ -93,14 +93,14 @@ export const extractDataFromImage = async (base64Image: string): Promise<{
   }
 };
 
-export const extractEditalData = async (base64Image: string): Promise<{ homologationDate: string } | null> => {
+export const extractEditalData = async (base64Image: string, mimeType: string = 'image/jpeg'): Promise<{ homologationDate: string } | null> => {
   const ai = getClient();
   if (!ai) return null;
 
   const base64Data = base64Image.split(',')[1] || base64Image;
 
   const prompt = `
-    Analise esta imagem de um Edital de Leilão ou Regras de Venda.
+    Analise esta imagem ou documento (PDF) de um Edital de Leilão ou Regras de Venda.
     Tente encontrar a "Data de Homologação", "Data do Resultado", ou "Data de Divulgação do Vencedor".
     
     Se encontrar uma data específica, retorne no formato YYYY-MM-DD.
@@ -117,7 +117,7 @@ export const extractEditalData = async (base64Image: string): Promise<{ homologa
       model: 'gemini-2.5-flash',
       contents: {
         parts: [
-          { inlineData: { mimeType: 'image/jpeg', data: base64Data } },
+          { inlineData: { mimeType: mimeType, data: base64Data } },
           { text: prompt }
         ]
       }
