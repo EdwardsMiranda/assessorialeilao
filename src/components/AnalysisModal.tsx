@@ -345,7 +345,29 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                             initialBid: data.initialBid || prev.initialBid,
                             bankValuation: data.bankValuation || prev.bankValuation,
                             condoDebtRule: data.condoDebtRule || prev.condoDebtRule,
-                            bankMirror: prev.bankMirror || property.url // Auto-fill mirror link with property URL
+                            bankMirror: prev.bankMirror || property.url, // Auto-fill mirror link with property URL
+                            paymentMethod: (() => {
+                                if (!data.paymentTerms || data.paymentTerms.length === 0) return prev.paymentMethod;
+                                const terms = data.paymentTerms.map(t => t.toLowerCase());
+                                const hasFinancing = terms.some(t => t.includes('financi') || t.includes('parcela'));
+                                const hasFgts = terms.some(t => t.includes('fgts'));
+                                const hasCash = terms.some(t => t.includes('vista'));
+
+                                if (hasFinancing && (hasCash || terms.length > 1)) {
+                                    return hasFgts ? 'À vista com FGTS ou Financiado' : 'À vista sem FGTS ou Financiado';
+                                } else if (hasFinancing) {
+                                    return 'Financiado';
+                                } else if (hasCash) {
+                                    return hasFgts ? 'À vista com FGTS' : 'À vista sem FGTS';
+                                }
+                                return prev.paymentMethod;
+                            })(),
+                            financing: (() => {
+                                // Auto-set financing to "Caixa (95%)" if payment method involves financing
+                                const terms = data.paymentTerms?.map(t => t.toLowerCase()) || [];
+                                const hasFinancing = terms.some(t => t.includes('financi') || t.includes('parcela'));
+                                return hasFinancing ? 'Caixa (95%)' : prev.financing;
+                            })()
                         }));
 
                         // If city found, trigger ITBI

@@ -40,6 +40,7 @@ export interface Client {
     cities: string[];
     maxBidValue: number;
     propertyTypes?: string[];
+    paymentMethods?: string[];
     notes?: string;
   };
   addedAt: string;

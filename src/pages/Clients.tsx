@@ -16,6 +16,7 @@ export const Clients: React.FC = () => {
     const [cities, setCities] = useState('');
     const [maxBid, setMaxBid] = useState('');
     const [notes, setNotes] = useState('');
+    const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<string[]>([]);
     const [isExpanding, setIsExpanding] = useState(false);
 
     const handleAiExpand = async () => {
@@ -41,6 +42,7 @@ export const Clients: React.FC = () => {
             investmentThesis: {
                 cities: cities.split(',').map(c => c.trim()).filter(Boolean),
                 maxBidValue: parseFloat(maxBid) || 0,
+                paymentMethods: selectedPaymentMethods,
                 notes
             },
             addedAt: new Date().toISOString()
@@ -48,7 +50,7 @@ export const Clients: React.FC = () => {
         addClient(newClient);
 
         // Reset
-        setName(''); setPhone(''); setEmail(''); setCities(''); setMaxBid(''); setNotes('');
+        setName(''); setPhone(''); setEmail(''); setCities(''); setMaxBid(''); setNotes(''); setSelectedPaymentMethods([]);
     };
 
     const filteredClients = clients.filter(c =>
@@ -131,13 +133,34 @@ export const Clients: React.FC = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-700 mb-1">Notas Adicionais</label>
                                     <textarea
                                         value={notes} onChange={e => setNotes(e.target.value)}
                                         className="w-full p-2 border border-gray-300 rounded bg-white text-sm"
                                         rows={2}
                                         placeholder="Ex: Prefere imóveis comerciais..."
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Formas de Pagamento (Pode selecionar várias)</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {['À vista', 'Financiado', 'FGTS', 'Parcelado'].map(method => (
+                                            <label key={method} className="flex items-center space-x-2 text-xs text-gray-700 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedPaymentMethods.includes(method)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedPaymentMethods([...selectedPaymentMethods, method]);
+                                                        } else {
+                                                            setSelectedPaymentMethods(selectedPaymentMethods.filter(m => m !== method));
+                                                        }
+                                                    }}
+                                                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                                <span>{method}</span>
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>

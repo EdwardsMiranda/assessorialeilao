@@ -214,7 +214,8 @@ export const extractDataFromUrl = async (url: string): Promise<{
   privateArea: number,
   initialBid: number,
   bankValuation: number,
-  condoDebtRule: boolean
+  condoDebtRule: boolean,
+  paymentTerms: string[]
 } | null> => {
   const ai = getClient();
   if (!ai) return null;
@@ -253,7 +254,9 @@ export const extractDataFromUrl = async (url: string): Promise<{
       4. "privateArea": Área privativa em m² (number).
       5. "initialBid": Lance Inicial ou Valor Mínimo de Venda (number).
       6. "bankValuation": Valor de Avaliação do Banco ou Avaliação Total (number).
+      6. "bankValuation": Valor de Avaliação do Banco ou Avaliação Total (number).
       7. "condoDebtRule": (boolean) Retorne true SOMENTE se encontrar texto dizendo que "A CAIXA realizará o pagamento apenas do valor que exceder o limite de 10% do valor de avaliação" ou "Condomínio: Sob responsabilidade do comprador, até o limite de 10%". Caso contrário, false.
+      8. "paymentTerms": Lista de strings com as formas de pagamento aceitas. Procure por termos como: "À vista", "Financiamento", "Parcelamento", "FGTS". Exemplo: ["À vista", "Financiamento", "FGTS"]. Se não encontrar, retorne lista vazia.
 
       Texto da página:
       "${cleanedContent}"
@@ -277,7 +280,8 @@ export const extractDataFromUrl = async (url: string): Promise<{
       privateArea: 0,
       initialBid: 0,
       bankValuation: 0,
-      condoDebtRule: false
+      condoDebtRule: false,
+      paymentTerms: []
     };
   }
 };
