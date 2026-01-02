@@ -236,6 +236,38 @@ export const AdminOpportunities: React.FC = () => {
 
                                         {/* Right: Management Actions */}
                                         <div className="lg:w-80 flex flex-col gap-3 border-l pl-0 lg:pl-6 border-gray-100">
+                                            {/* Client Suggestions */}
+                                            {matchedClients.length > 0 && (
+                                                <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-3 rounded-lg border border-purple-200">
+                                                    <label className="block text-xs font-bold text-purple-900 mb-2 flex items-center gap-1">
+                                                        <Trophy className="w-3 h-3" /> Clientes Sugeridos ({matchedClients.length})
+                                                    </label>
+                                                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                        {matchedClients.map(client => {
+                                                            const cityMatch = client.investmentThesis.cities.some((c: string) =>
+                                                                data.cityState.toLowerCase().includes(c.toLowerCase())
+                                                            );
+                                                            const valueMatch = client.investmentThesis.maxBidValue >= data.initialBid;
+                                                            const paymentMatch = !client.paymentMethods || client.paymentMethods.length === 0 ||
+                                                                client.paymentMethods.some((pm: string) =>
+                                                                    data.paymentMethod.toLowerCase().includes(pm.toLowerCase())
+                                                                );
+
+                                                            return (
+                                                                <div key={client.id} className="bg-white p-2 rounded border border-purple-200 text-xs">
+                                                                    <p className="font-bold text-purple-900">{client.name}</p>
+                                                                    <div className="mt-1 space-y-0.5 text-[10px] text-gray-600">
+                                                                        {cityMatch && <p className="flex items-center gap-1">✓ Cidade compatível</p>}
+                                                                        {valueMatch && <p className="flex items-center gap-1">✓ Valor dentro do orçamento</p>}
+                                                                        {paymentMatch && <p className="flex items-center gap-1">✓ Forma de pagamento aceita</p>}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
                                                 <label className="block text-xs font-bold text-blue-800 mb-2 flex items-center gap-1">
                                                     <Send className="w-3 h-3" /> Destino (CRM)
@@ -257,13 +289,6 @@ export const AdminOpportunities: React.FC = () => {
                                                         </option>
                                                     ))}
                                                 </select>
-
-                                                {/* Match Badge */}
-                                                {matchedClients.length > 0 && !clientId && (
-                                                    <div className="text-[10px] text-blue-600 bg-blue-100 px-2 py-1 rounded mb-2">
-                                                        {matchedClients.length} investidor(es) com tese compatível.
-                                                    </div>
-                                                )}
 
                                                 <div className="flex items-center gap-2">
                                                     <input
