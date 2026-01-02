@@ -258,12 +258,12 @@ export const Inbox: React.FC = () => {
                     await addProperty(
                         currentUrl,
                         AuctionModality.LEILAO_JUDICIAL,
-                        extractedData.dates?.[0] || new Date().toISOString().split('T')[0], // Fallback date
-                        extractedData.title || 'Oportunidade Smart IA',
+                        new Date().toISOString().split('T')[0], // Fallback date as extraction doesn't provide it yet
+                        extractedData.condoName || `Leilão em ${extractedData.cityState}` || 'Oportunidade Smart IA',
                         {
-                            cityState: extractedData.city || '',
-                            initialBid: extractedData.secondAuctionValue || extractedData.assessmentValue || 0,
-                            bankValuation: extractedData.assessmentValue || 0,
+                            cityState: extractedData.cityState || '',
+                            initialBid: extractedData.initialBid || 0,
+                            bankValuation: extractedData.bankValuation || 0,
                             paymentMethod: extractedData.paymentTerms
                         }
                     );
