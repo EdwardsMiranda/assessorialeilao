@@ -11,7 +11,7 @@ interface AppContextType {
   clients: Client[];
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, pass: string) => Promise<boolean>;
+  login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   createUser: (name: string, email: string, pass: string, role?: UserRole) => Promise<boolean>;
   logout: () => Promise<void>;
   updateUserRole: (userId: string, role: UserRole) => Promise<void>;
@@ -123,18 +123,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // --- AUTH ACTIONS ---
-  const login = async (email: string, pass: string): Promise<boolean> => {
+  const login = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
     const { user, error } = await authService.login(email, pass);
     if (error) {
-      alert(error);
-      return false;
+      // Alert removed to allow UI handling
+      return { success: false, error: error };
     }
     if (user) {
       setCurrentUser(user);
       await loadAllData();
-      return true;
+      return { success: true };
     }
-    return false;
+    return { success: false, error: 'Erro desconhecido ao fazer login' };
   };
 
   const createUser = async (name: string, email: string, pass: string, role: UserRole = UserRole.ANALYST): Promise<boolean> => {

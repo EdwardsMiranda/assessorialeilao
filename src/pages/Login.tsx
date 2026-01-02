@@ -19,12 +19,12 @@ export const Login: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const success = await login(email, password);
+            const { success, error: loginError } = await login(email, password);
             if (success) {
                 // Redirect to dashboard after successful login
                 navigate('/dashboard');
             } else {
-                setError('Email ou senha inválidos, ou usuário bloqueado.');
+                setError(loginError || 'Erro ao efetuar login. Verifique suas credenciais.');
             }
         } catch (err) {
             setError('Erro ao fazer login. Tente novamente.');
