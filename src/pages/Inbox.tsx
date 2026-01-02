@@ -2,14 +2,15 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { AuctionModality } from '../types';
-import { Plus, Link as LinkIcon, Building, Calendar, FileSpreadsheet, Upload, Download, AlertTriangle, CheckCircle, Copy } from 'lucide-react';
+import { Plus, Link as LinkIcon, Building, Calendar, FileSpreadsheet, Upload, Download, AlertTriangle, CheckCircle, Copy, Brain, Loader2 } from 'lucide-react';
 import { formatDate } from '../utils/formatters';
 import * as XLSX from 'xlsx';
+import { geminiService } from '../services/geminiService';
 
 
 export const Inbox: React.FC = () => {
-    const { addProperty, addProperties, findPropertyByUrl } = useApp();
-    const [activeTab, setActiveTab] = useState<'manual' | 'import'>('manual');
+    const { addProperty, addProperties, findPropertyByUrl, clients } = useApp();
+    const [activeTab, setActiveTab] = useState<'manual' | 'import' | 'smart'>('manual');
 
     // Manual Form State
     const [url, setUrl] = useState('');
@@ -33,6 +34,12 @@ export const Inbox: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [importStats, setImportStats] = useState<{ total: number, errors: number, duplicates: number } | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
+
+    // Smart Import State
+    const [smartUrls, setSmartUrls] = useState('');
+    const [isProcessingSmart, setIsProcessingSmart] = useState(false);
+    const [smartLogs, setSmartLogs] = useState<string[]>([]);
+    const [smartProgress, setSmartProgress] = useState(0);
 
     const checkManualDuplication = () => {
         const existing = findPropertyByUrl(url);
@@ -215,6 +222,73 @@ export const Inbox: React.FC = () => {
         }
     };
 
+    // --- Smart Import Logic ---
+    const handleSmartImport = async () => {
+        const urls = smartUrls.split('\n').filter(u => u.trim() !== '');
+        if (urls.length === 0) return;
+
+        setIsProcessingSmart(true);
+        setSmartLogs(['Iniciando análise inteligente...']);
+        setSmartProgress(0);
+
+        let addedCount = 0;
+
+        for (let i = 0; i < urls.length; i++) {
+            const currentUrl = urls[i].trim();
+            setSmartProgress(((i + 1) / urls.length) * 100);
+
+            try {
+                // 1. Check duplicate
+                if (findPropertyByUrl(currentUrl)) {
+                    setSmartLogs(prev => [`⚠️ [Duplicado] ${currentUrl}`, ...prev]);
+                    continue;
+                }
+
+                setSmartLogs(prev => [`🔍 Analisando: ${currentUrl}...`, ...prev]);
+
+                // 2. Extract Data via AI
+                const extractedData = await geminiService.extractDataFromUrl(currentUrl);
+
+                // 3. Check Fit with Clients
+                const { matched, clientIds, reason } = await geminiService.checkPropertyFit(extractedData, clients);
+
+                if (matched) {
+                    // 4. Add Property
+                    // Defaulting to Leilão Judicial if not specified, parsing date if valid
+                    await addProperty(
+                        currentUrl,
+                        AuctionModality.LEILAO_JUDICIAL,
+                        extractedData.dates?.[0] || new Date().toISOString().split('T')[0], // Fallback date
+                        extractedData.title || 'Oportunidade Smart IA',
+                        {
+                            cityState: extractedData.city || '',
+                            initialBid: extractedData.secondAuctionValue || extractedData.assessmentValue || 0,
+                            bankValuation: extractedData.assessmentValue || 0,
+                            paymentMethod: extractedData.paymentTerms
+                        }
+                    );
+
+                    // Note: Ideally we would tag the property with interested clients here.
+                    // For now, we put it in the analysis notes or similar? 
+                    // The 'addProperty' simple signature doesn't support generic metadata update easily 
+                    // without a secondary call, but let's keep it simple for now.
+
+                    setSmartLogs(prev => [`✅ [MATCH] Importado! (${reason})`, ...prev]);
+                    addedCount++;
+                } else {
+                    setSmartLogs(prev => [`❌ [Sem Match] Descartado. (${reason})`, ...prev]);
+                }
+
+            } catch (err) {
+                console.error(err);
+                setSmartLogs(prev => [`❌ [Erro] Falha ao processar ${currentUrl}`, ...prev]);
+            }
+        }
+
+        setSmartLogs(prev => [`🏁 Concluído! ${addedCount} imóveis importados de ${urls.length} analisados.`, ...prev]);
+        setIsProcessingSmart(false);
+    };
+
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragOver(false);
@@ -282,6 +356,14 @@ export const Inbox: React.FC = () => {
                         className={`flex-1 py-4 text-sm font-medium text-center transition-colors ${activeTab === 'import' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         Importação em Massa (XLSX/CSV)
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('smart')}
+                        className={`flex-1 py-4 text-sm font-medium text-center transition-colors ${activeTab === 'smart' ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        <span className="flex items-center justify-center gap-2">
+                            <Brain className="w-4 h-4" /> Importação Inteligente (IA)
+                        </span>
                     </button>
                 </div>
 
@@ -437,85 +519,147 @@ export const Inbox: React.FC = () => {
                                 </button>
                             </form>
                         </>
-                    ) : (
-                        <>
-                            <div className="mb-8 text-center">
-                                <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4">
-                                    <FileSpreadsheet className="w-6 h-6" />
-                                </div>
-                                <h2 className="text-2xl font-bold text-gray-900">Importar Planilha</h2>
-                                <p className="text-gray-500 mt-2">Carregue vários imóveis de uma vez via Excel (.xlsx) ou CSV.</p>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-start gap-3">
-                                    <div className="p-2 bg-white rounded-full text-blue-500 shadow-sm">
-                                        <Download className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-sm font-bold text-blue-900">Passo 1: Baixe o modelo</h4>
-                                        <p className="text-xs text-blue-700 mb-2">A ordem das colunas deve ser: <strong>1) Link, 2) Modalidade, 3) Data</strong>.</p>
-                                        <button
-                                            onClick={downloadTemplate}
-                                            className="text-xs font-semibold text-blue-600 hover:text-blue-800 underline"
-                                        >
-                                            Download Template.xlsx
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div
-                                    className={`border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-colors cursor-pointer ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50'}`}
-                                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-                                    onDragLeave={() => setIsDragOver(false)}
-                                    onDrop={handleDrop}
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
-                                    <Upload className={`w-10 h-10 mb-4 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
-                                    <p className="text-sm font-medium text-gray-700 text-center">
-                                        Arraste seu arquivo Excel/CSV aqui ou <span className="text-blue-600">clique para selecionar</span>
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-2">Suporta .xlsx e .csv</p>
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileUpload}
-                                        accept=".csv, .xlsx, .xls"
-                                        className="hidden"
-                                    />
-                                </div>
-
-                                {importStats && (
-                                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                        <h4 className="text-sm font-bold text-gray-900 mb-2">Resumo da Importação</h4>
-                                        <div className="flex flex-wrap gap-4">
-                                            <div className="flex items-center gap-2 text-sm text-green-700">
-                                                <CheckCircle className="w-4 h-4" />
-                                                <span>{importStats.total} novos importados</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-sm text-yellow-700">
-                                                <Copy className="w-4 h-4" />
-                                                <span>{importStats.duplicates} duplicados (ignorados)</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-sm text-red-700">
-                                                <AlertTriangle className="w-4 h-4" />
-                                                <span>{importStats.errors} erros/inválidos</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
                         </>
+                ) : activeTab === 'import' ? (
+                <>
+                    <div className="mb-8 text-center">
+                        <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4">
+                            <FileSpreadsheet className="w-6 h-6" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900">Importar Planilha</h2>
+                        <p className="text-gray-500 mt-2">Carregue vários imóveis de uma vez via Excel (.xlsx) ou CSV.</p>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-start gap-3">
+                            <div className="p-2 bg-white rounded-full text-blue-500 shadow-sm">
+                                <Download className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-blue-900">Passo 1: Baixe o modelo</h4>
+                                <p className="text-xs text-blue-700 mb-2">A ordem das colunas deve ser: <strong>1) Link, 2) Modalidade, 3) Data</strong>.</p>
+                                <button
+                                    onClick={downloadTemplate}
+                                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 underline"
+                                >
+                                    Download Template.xlsx
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            className={`border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-colors cursor-pointer ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50'}`}
+                            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                            onDragLeave={() => setIsDragOver(false)}
+                            onDrop={handleDrop}
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            <Upload className={`w-10 h-10 mb-4 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
+                            <p className="text-sm font-medium text-gray-700 text-center">
+                                Arraste seu arquivo Excel/CSV aqui ou <span className="text-blue-600">clique para selecionar</span>
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">Suporta .xlsx e .csv</p>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileUpload}
+                                accept=".csv, .xlsx, .xls"
+                                className="hidden"
+                            />
+                        </div>
+
+                        {importStats && (
+                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <h4 className="text-sm font-bold text-gray-900 mb-2">Resumo da Importação</h4>
+                                <div className="flex flex-wrap gap-4">
+                                    <div className="flex items-center gap-2 text-sm text-green-700">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span>{importStats.total} novos importados</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-yellow-700">
+                                        <Copy className="w-4 h-4" />
+                                        <span>{importStats.duplicates} duplicados (ignorados)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-red-700">
+                                        <AlertTriangle className="w-4 h-4" />
+                                        <span>{importStats.errors} erros/inválidos</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </>
+                ) : (
+                <>
+                    <div className="mb-8 text-center">
+                        <div className="mx-auto w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 mb-4">
+                            <Brain className="w-6 h-6" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900">Importação Inteligente com IA</h2>
+                        <p className="text-gray-500 mt-2">Cole links e a IA filtrará apenas o que atende seus clientes.</p>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 text-sm text-purple-900">
+                            <h4 className="font-bold flex items-center gap-2 mb-2"><Brain className="w-4 h-4" /> Como funciona?</h4>
+                            <ul className="list-disc list-inside space-y-1 text-purple-800">
+                                <li>Cole uma lista de links de leilões (um por linha).</li>
+                                <li>A IA vai ler cada página e extrair os dados.</li>
+                                <li>Em seguida, cruzará com a tese de todos os seus investidores.</li>
+                                <li><strong>Apenas imóveis com "Match" serão importados.</strong></li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Links dos Imóveis (Um por linha)</label>
+                            <textarea
+                                value={smartUrls}
+                                onChange={e => setSmartUrls(e.target.value)}
+                                rows={8}
+                                className="w-full p-3 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-sm font-mono"
+                                placeholder={`https://leilao.com/lote/1\nhttps://leilao.com/lote/2\n...`}
+                                disabled={isProcessingSmart}
+                            />
+                        </div>
+
+                        <button
+                            onClick={handleSmartImport}
+                            disabled={isProcessingSmart || !smartUrls.trim()}
+                            className="w-full py-3 bg-purple-600 text-white font-bold rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            {isProcessingSmart ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" /> Processando... {Math.round(smartProgress)}%
+                                </>
+                            ) : (
+                                <>
+                                    <Brain className="w-5 h-5" /> Iniciar Análise e Importação
+                                </>
+                            )}
+                        </button>
+
+                        {/* Logs Area */}
+                        {smartLogs.length > 0 && (
+                            <div className="bg-gray-900 rounded-lg p-4 font-mono text-xs max-h-60 overflow-y-auto">
+                                {smartLogs.map((log, i) => (
+                                    <div key={i} className={`mb-1 ${log.includes('✅') ? 'text-green-400' : log.includes('❌') ? 'text-red-400' : log.includes('⚠️') ? 'text-yellow-400' : 'text-gray-300'}`}>
+                                        {log}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </>
                     )}
 
-                    {successMsg && (
-                        <div className="mt-6 p-4 bg-green-50 text-green-700 rounded-md flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                            {successMsg}
-                        </div>
-                    )}
-                </div>
+                {successMsg && (
+                    <div className="mt-6 p-4 bg-green-50 text-green-700 rounded-md flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                        {successMsg}
+                    </div>
+                )}
             </div>
         </div>
+        </div >
     );
 };
