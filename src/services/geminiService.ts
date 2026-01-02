@@ -269,18 +269,7 @@ export const extractDataFromUrl = async (url: string): Promise<{
     // We try to grab the body content
     const bodyContent = htmlText.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] || htmlText.substring(0, 40000);
 
-    // Better cleaning strategy: preserve structure
-    const cleanedContent = bodyContent
-      .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, "")
-      .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, "")
-      .replace(/<br\s*\/?>/gim, "\n") // Replace br with newline
-      .replace(/<\/p>/gim, "\n")      // End of paragraph = newline
-      .replace(/<\/div>/gim, "\n")    // End of div = newline
-      .replace(/<\/tr>/gim, "\n")     // End of table row = newline
-      .replace(/<\/li>/gim, "\n")     // End of list item = newline
-      .replace(/<[^>]+>/g, ' ')       // Strip remaining tags
-      .replace(/\s+/g, ' ')           // Collapse multiple spaces BUT...
-      .replace(/\n\s*\n/g, "\n")      // ...we actually want to keep meaningful lines. Let's fix this below.
+
 
     // Re-doing the whitespace normalization to be safer:
     // 1. Strip tags but keep newlines where structure matters
