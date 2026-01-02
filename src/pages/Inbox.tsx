@@ -249,6 +249,12 @@ export const Inbox: React.FC = () => {
                 // 2. Extract Data via AI
                 const extractedData = await extractDataFromUrl(currentUrl);
 
+                // Check if extraction failed
+                if (!extractedData) {
+                    setSmartLogs(prev => [`❌ Erro ao extrair dados de: ${currentUrl}`, ...prev]);
+                    continue;
+                }
+
                 // 3. Check Fit with Clients
                 const { matched, clientIds, reason } = await checkPropertyFit(extractedData, clients);
 
@@ -264,7 +270,7 @@ export const Inbox: React.FC = () => {
                             cityState: extractedData.cityState || '',
                             initialBid: extractedData.initialBid || 0,
                             bankValuation: extractedData.bankValuation || 0,
-                            paymentMethod: extractedData.paymentTerms
+                            paymentMethod: extractedData.paymentTerms?.join(', ') || ''
                         }
                     );
 
@@ -273,7 +279,7 @@ export const Inbox: React.FC = () => {
                     // The 'addProperty' simple signature doesn't support generic metadata update easily 
                     // without a secondary call, but let's keep it simple for now.
 
-                    setSmartLogs(prev => [`✅ [MATCH] Importado! (${reason})`, ...prev]);
+                    setSmartLogs(prev => [`✅ MATCH! Cliente(s): ${clientIds.join(', ')} - ${reason}`, ...prev]);
                     addedCount++;
                 } else {
                     setSmartLogs(prev => [`❌ [Sem Match] Descartado. (${reason})`, ...prev]);
