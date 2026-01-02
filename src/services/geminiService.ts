@@ -283,6 +283,23 @@ export const extractDataFromUrl = async (url: string): Promise<{
 
     console.log('[extractDataFromUrl] Conteúdo limpo (amostra):', structuredText.substring(0, 200));
 
+    // 1.5 Check for Valid Content vs CAPTCHA
+    const captchaKeywords = [
+      'radware bot manager',
+      'captcha',
+      'verificação de segurança',
+      'human verification',
+      'acesso negado',
+      'access denied',
+      'precisamos fazer uma verificação'
+    ];
+
+    const lowerText = structuredText.toLowerCase();
+    if (captchaKeywords.some(kw => lowerText.includes(kw)) || structuredText.length < 200) {
+      console.warn('[extractDataFromUrl] ⚠️ Bloqueio de Bot/Captcha detectado ou conteúdo insuficiente.');
+      throw new Error('CAPTCHA_DETECTED');
+    }
+
     // 2. Ask Gemini to extract data
     const prompt = `
       Você é um especialista em extração de dados de imóveis.

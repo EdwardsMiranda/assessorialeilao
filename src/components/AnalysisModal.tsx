@@ -221,6 +221,7 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
     const [showMaxBidSim, setShowMaxBidSim] = useState(false);
     const [isEditingMode, setIsEditingMode] = useState(false);
     const [isAutoFillThinking, setIsAutoFillThinking] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // AI Feedback States
     const [visionFeedback, setVisionFeedback] = useState<FeedbackState | null>(null);
@@ -392,8 +393,12 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                     } else {
                         console.warn('[AUTO-FILL] ⚠️ Nenhum dado foi extraído da URL');
                     }
-                } catch (err) {
+                } catch (err: any) {
                     console.error('[AUTO-FILL] ❌ Erro no auto-preenchimento:', err);
+                    if (err.message === 'CAPTCHA_DETECTED') {
+                        setError('Site protegido por Captcha. Use "Colar Texto" ou "Upload Print".');
+                        // Optional: trigger a toast or visual cue here
+                    }
                 } finally {
                     setIsAutoFillThinking(false);
                 }
@@ -872,6 +877,17 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                     <div className="bg-blue-50 text-blue-800 px-6 py-2 text-xs font-medium flex items-center gap-2 justify-center border-b border-blue-200">
                         <Edit className="w-3 h-3" />
                         Análise alterada em: {new Date(property.lastEditedAt).toLocaleString('pt-BR')}
+                    </div>
+                )}
+
+                {/* Error Banner */}
+                {error && (
+                    <div className="bg-red-50 text-red-800 px-6 py-3 text-sm font-bold flex items-center justify-between border-b border-red-200 animate-pulse">
+                        <div className="flex items-center gap-2">
+                            <AlertTriangle className="w-5 h-5 text-red-600" />
+                            {error}
+                        </div>
+                        <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800 font-bold px-2">✕</button>
                     </div>
                 )}
 
