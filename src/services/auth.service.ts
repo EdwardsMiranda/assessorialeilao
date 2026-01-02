@@ -7,29 +7,37 @@ export const authService = {
      */
     async login(email: string, password: string): Promise<{ user: User | null; error: string | null }> {
         try {
-            // First, get user from database to check if blocked
-            const { data: userData, error: userError } = await supabase
-                .from('users')
-                .select('*')
-                .eq('email', email)
-                .single();
-
-            if (userError || !userData) {
-                return { user: null, error: 'Credenciais inválidas' };
-            }
-
-            if (userData.blocked) {
-                return { user: null, error: 'Usuário bloqueado. Contate o administrador.' };
-            }
-
-            // Authenticate with Supabase Auth
+            // 1. Authenticate with Supabase Auth FIRST
+            // This ensures we have a valid session before trying to query the 'users' table,
+            // avoiding Row Level Security (RLS) issues that might block unauthenticated reads.
             const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
             if (authError || !authData.user) {
-                return { user: null, error: 'Credenciais inválidas' };
+                console.error("Auth Error:", authError?.message);
+                return { user: null, error: 'Email ou senha inválidos.' };
+            }
+
+            // 2. Get detailed user profile from database
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', authData.user.id) // Query by ID, which is safer and guarantees uniqueness
+                .single();
+
+            if (userError || !userData) {
+                // If user exists in Auth but not in public.users, something is wrong with the sync
+                // however, we should sign them out to prevent a "ghost" session
+                await supabase.auth.signOut();
+                console.error("User Profile Error:", userError?.message);
+                return { user: null, error: 'Perfil de usuário não encontrado.' };
+            }
+
+            if (userData.blocked) {
+                await supabase.auth.signOut();
+                return { user: null, error: 'Usuário bloqueado. Contate o administrador.' };
             }
 
             // Map database user to app User type
@@ -45,6 +53,8 @@ export const authService = {
             return { user, error: null };
         } catch (error) {
             console.error('Login error:', error);
+            // Ensure we don't leave a half-logged-in state if something unexpected breaks
+            await supabase.auth.signOut();
             return { user: null, error: 'Erro ao fazer login' };
         }
     },
@@ -172,7 +182,7 @@ export const authService = {
                 return { users: [], error: error.message };
             }
 
-            const users: User[] = data.map(u => ({
+            const users: User[] = data.map((u: any) => ({
                 id: u.id,
                 name: u.name,
                 email: u.email,
