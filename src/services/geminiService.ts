@@ -267,36 +267,56 @@ export const extractDataFromUrl = async (url: string): Promise<{
 
     // Limit HTML size to avoid token limits (approx 20k chars should be enough for main content)
     // We try to grab the body content
-    const bodyContent = htmlText.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] || htmlText.substring(0, 30000);
-    const cleanedContent = bodyContent.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, "")
-      .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, "")
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .substring(0, 20000);
+    const bodyContent = htmlText.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] || htmlText.substring(0, 40000);
 
-    console.log('[extractDataFromUrl] Conteúdo limpo, tamanho:', cleanedContent.length, 'caracteres');
+    // Better cleaning strategy: preserve structure
+    const cleanedContent = bodyContent
+      .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, "")
+      .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, "")
+      .replace(/<br\s*\/?>/gim, "\n") // Replace br with newline
+      .replace(/<\/p>/gim, "\n")      // End of paragraph = newline
+      .replace(/<\/div>/gim, "\n")    // End of div = newline
+      .replace(/<\/tr>/gim, "\n")     // End of table row = newline
+      .replace(/<\/li>/gim, "\n")     // End of list item = newline
+      .replace(/<[^>]+>/g, ' ')       // Strip remaining tags
+      .replace(/\s+/g, ' ')           // Collapse multiple spaces BUT...
+      .replace(/\n\s*\n/g, "\n")      // ...we actually want to keep meaningful lines. Let's fix this below.
+
+    // Re-doing the whitespace normalization to be safer:
+    // 1. Strip tags but keep newlines where structure matters
+    let structuredText = bodyContent
+      .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, "")
+      .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, "")
+      .replace(/<(br|p|div|tr|li|h[1-6])[^>]*>/gim, "\n") // Add newline before block elements
+      .replace(/<[^>]+>/g, " ") // Strip all other tags
+      .replace(/\s+/g, " ")     // Collapse whitespace to single space
+      .trim();
+
+    console.log('[extractDataFromUrl] Conteúdo limpo (amostra):', structuredText.substring(0, 200));
 
     // 2. Ask Gemini to extract data
     const prompt = `
-      Analise o texto abaixo extraído de uma página de leilão de imóveis.
-      Extraia as seguintes informações e retorne APENAS um JSON válido.
+      Você é um especialista em extração de dados de imóveis.
+      Analise o texto desestruturado abaixo, que veio de uma página de leilão (ex: Caixa, SOLD, Zukerman).
       
-      Para valores numéricos, converta para float (ex: "R$ 150.000,00" vira 150000.00).
-      
-      1. "cityState": Cidade e UF no formato "Cidade-UF".
-      2. "condoName": Nome do condomínio/edifício. Se não encontrar, string vazia.
-      3. "address": O endereço completo (Logradouro, Número, Bairro). REGRA: NÃO inclua complemento, NÃO inclua apto, NÃO inclua CEP.
-      4. "privateArea": Área privativa em m² (number).
-      5. "initialBid": Lance Inicial ou Valor Mínimo de Venda (number).
-      6. "bankValuation": Valor de Avaliação do Banco ou Avaliação Total (number).
-      6. "bankValuation": Valor de Avaliação do Banco ou Avaliação Total (number).
-      7. "condoDebtRule": (boolean) Retorne true SOMENTE se encontrar texto dizendo que "A CAIXA realizará o pagamento apenas do valor que exceder o limite de 10% do valor de avaliação" ou "Condomínio: Sob responsabilidade do comprador, até o limite de 10%". Caso contrário, false.
-      8. "paymentTerms": Lista de strings com as formas de pagamento aceitas. Procure por termos como: "À vista", "Financiamento", "Parcelamento", "FGTS". Exemplo: ["À vista", "Financiamento", "FGTS"]. Se não encontrar, retorne lista vazia.
-
       Texto da página:
-      "${cleanedContent}"
+      """
+      ${structuredText.substring(0, 25000)}
+      """
 
-      Retorne apenas o JSON, sem markdown.
+      Extraia as seguintes informações e retorne APENAS um JSON válido.
+      Se não encontrar um campo, deixe como null ou 0.
+
+      1. "cityState": Cidade e UF (Ex: "São Paulo-SP", "Campinas-SP"). Procure por "Localização", "Cidade", ou padrões de endereço.
+      2. "condoName": Nome do edifício/condomínio.
+      3. "address": Endereço COMPLETO (Rua, Número, Bairro). Ignore CEP.
+      4. "privateArea": Área privativa/útil em m² (number). Procure por "Área Privativa", "Área Útil", "Área", "m²".
+      5. "initialBid": Valor de venda/lance inicial (number). Procure por "Valor de Venda", "Lance Mínimo", "Preço".
+      6. "bankValuation": Valor de avaliação (number). Procure por "Avaliação", "Valor de Avaliação".
+      7. "condoDebtRule": (boolean) true se o comprador for responsável pela dívida de condomínio acima de um limite (ex: 10%). Padrão false.
+      8. "paymentTerms": (array strings) Formas de pagamento (Ex: "À vista", "Financiamento", "FGTS").
+
+      Retorne APENAS o JSON.
     `;
 
     console.log('[extractDataFromUrl] Enviando para Gemini...');
