@@ -519,147 +519,146 @@ export const Inbox: React.FC = () => {
                                 </button>
                             </form>
                         </>
-                        </>
-                ) : activeTab === 'import' ? (
-                <>
-                    <div className="mb-8 text-center">
-                        <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4">
-                            <FileSpreadsheet className="w-6 h-6" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-gray-900">Importar Planilha</h2>
-                        <p className="text-gray-500 mt-2">Carregue vários imóveis de uma vez via Excel (.xlsx) ou CSV.</p>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-start gap-3">
-                            <div className="p-2 bg-white rounded-full text-blue-500 shadow-sm">
-                                <Download className="w-4 h-4" />
+                    ) : activeTab === 'import' ? (
+                        <>
+                            <div className="mb-8 text-center">
+                                <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4">
+                                    <FileSpreadsheet className="w-6 h-6" />
+                                </div>
+                                <h2 className="text-2xl font-bold text-gray-900">Importar Planilha</h2>
+                                <p className="text-gray-500 mt-2">Carregue vários imóveis de uma vez via Excel (.xlsx) ou CSV.</p>
                             </div>
-                            <div>
-                                <h4 className="text-sm font-bold text-blue-900">Passo 1: Baixe o modelo</h4>
-                                <p className="text-xs text-blue-700 mb-2">A ordem das colunas deve ser: <strong>1) Link, 2) Modalidade, 3) Data</strong>.</p>
-                                <button
-                                    onClick={downloadTemplate}
-                                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 underline"
-                                >
-                                    Download Template.xlsx
-                                </button>
-                            </div>
-                        </div>
 
-                        <div
-                            className={`border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-colors cursor-pointer ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50'}`}
-                            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-                            onDragLeave={() => setIsDragOver(false)}
-                            onDrop={handleDrop}
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <Upload className={`w-10 h-10 mb-4 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
-                            <p className="text-sm font-medium text-gray-700 text-center">
-                                Arraste seu arquivo Excel/CSV aqui ou <span className="text-blue-600">clique para selecionar</span>
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">Suporta .xlsx e .csv</p>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileUpload}
-                                accept=".csv, .xlsx, .xls"
-                                className="hidden"
-                            />
-                        </div>
-
-                        {importStats && (
-                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                <h4 className="text-sm font-bold text-gray-900 mb-2">Resumo da Importação</h4>
-                                <div className="flex flex-wrap gap-4">
-                                    <div className="flex items-center gap-2 text-sm text-green-700">
-                                        <CheckCircle className="w-4 h-4" />
-                                        <span>{importStats.total} novos importados</span>
+                            <div className="space-y-6">
+                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-start gap-3">
+                                    <div className="p-2 bg-white rounded-full text-blue-500 shadow-sm">
+                                        <Download className="w-4 h-4" />
                                     </div>
-                                    <div className="flex items-center gap-2 text-sm text-yellow-700">
-                                        <Copy className="w-4 h-4" />
-                                        <span>{importStats.duplicates} duplicados (ignorados)</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-red-700">
-                                        <AlertTriangle className="w-4 h-4" />
-                                        <span>{importStats.errors} erros/inválidos</span>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-blue-900">Passo 1: Baixe o modelo</h4>
+                                        <p className="text-xs text-blue-700 mb-2">A ordem das colunas deve ser: <strong>1) Link, 2) Modalidade, 3) Data</strong>.</p>
+                                        <button
+                                            onClick={downloadTemplate}
+                                            className="text-xs font-semibold text-blue-600 hover:text-blue-800 underline"
+                                        >
+                                            Download Template.xlsx
+                                        </button>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                </>
-                ) : (
-                <>
-                    <div className="mb-8 text-center">
-                        <div className="mx-auto w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 mb-4">
-                            <Brain className="w-6 h-6" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-gray-900">Importação Inteligente com IA</h2>
-                        <p className="text-gray-500 mt-2">Cole links e a IA filtrará apenas o que atende seus clientes.</p>
-                    </div>
 
-                    <div className="space-y-6">
-                        <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 text-sm text-purple-900">
-                            <h4 className="font-bold flex items-center gap-2 mb-2"><Brain className="w-4 h-4" /> Como funciona?</h4>
-                            <ul className="list-disc list-inside space-y-1 text-purple-800">
-                                <li>Cole uma lista de links de leilões (um por linha).</li>
-                                <li>A IA vai ler cada página e extrair os dados.</li>
-                                <li>Em seguida, cruzará com a tese de todos os seus investidores.</li>
-                                <li><strong>Apenas imóveis com "Match" serão importados.</strong></li>
-                            </ul>
-                        </div>
+                                <div
+                                    className={`border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-colors cursor-pointer ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50'}`}
+                                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                                    onDragLeave={() => setIsDragOver(false)}
+                                    onDrop={handleDrop}
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    <Upload className={`w-10 h-10 mb-4 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
+                                    <p className="text-sm font-medium text-gray-700 text-center">
+                                        Arraste seu arquivo Excel/CSV aqui ou <span className="text-blue-600">clique para selecionar</span>
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-2">Suporta .xlsx e .csv</p>
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileUpload}
+                                        accept=".csv, .xlsx, .xls"
+                                        className="hidden"
+                                    />
+                                </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Links dos Imóveis (Um por linha)</label>
-                            <textarea
-                                value={smartUrls}
-                                onChange={e => setSmartUrls(e.target.value)}
-                                rows={8}
-                                className="w-full p-3 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-sm font-mono"
-                                placeholder={`https://leilao.com/lote/1\nhttps://leilao.com/lote/2\n...`}
-                                disabled={isProcessingSmart}
-                            />
-                        </div>
-
-                        <button
-                            onClick={handleSmartImport}
-                            disabled={isProcessingSmart || !smartUrls.trim()}
-                            className="w-full py-3 bg-purple-600 text-white font-bold rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                            {isProcessingSmart ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" /> Processando... {Math.round(smartProgress)}%
-                                </>
-                            ) : (
-                                <>
-                                    <Brain className="w-5 h-5" /> Iniciar Análise e Importação
-                                </>
-                            )}
-                        </button>
-
-                        {/* Logs Area */}
-                        {smartLogs.length > 0 && (
-                            <div className="bg-gray-900 rounded-lg p-4 font-mono text-xs max-h-60 overflow-y-auto">
-                                {smartLogs.map((log, i) => (
-                                    <div key={i} className={`mb-1 ${log.includes('✅') ? 'text-green-400' : log.includes('❌') ? 'text-red-400' : log.includes('⚠️') ? 'text-yellow-400' : 'text-gray-300'}`}>
-                                        {log}
+                                {importStats && (
+                                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                        <h4 className="text-sm font-bold text-gray-900 mb-2">Resumo da Importação</h4>
+                                        <div className="flex flex-wrap gap-4">
+                                            <div className="flex items-center gap-2 text-sm text-green-700">
+                                                <CheckCircle className="w-4 h-4" />
+                                                <span>{importStats.total} novos importados</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-yellow-700">
+                                                <Copy className="w-4 h-4" />
+                                                <span>{importStats.duplicates} duplicados (ignorados)</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-red-700">
+                                                <AlertTriangle className="w-4 h-4" />
+                                                <span>{importStats.errors} erros/inválidos</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                ))}
+                                )}
                             </div>
-                        )}
-                    </div>
-                </>
+                        </>
+                    ) : (
+                        <>
+                            <div className="mb-8 text-center">
+                                <div className="mx-auto w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 mb-4">
+                                    <Brain className="w-6 h-6" />
+                                </div>
+                                <h2 className="text-2xl font-bold text-gray-900">Importação Inteligente com IA</h2>
+                                <p className="text-gray-500 mt-2">Cole links e a IA filtrará apenas o que atende seus clientes.</p>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 text-sm text-purple-900">
+                                    <h4 className="font-bold flex items-center gap-2 mb-2"><Brain className="w-4 h-4" /> Como funciona?</h4>
+                                    <ul className="list-disc list-inside space-y-1 text-purple-800">
+                                        <li>Cole uma lista de links de leilões (um por linha).</li>
+                                        <li>A IA vai ler cada página e extrair os dados.</li>
+                                        <li>Em seguida, cruzará com a tese de todos os seus investidores.</li>
+                                        <li><strong>Apenas imóveis com "Match" serão importados.</strong></li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Links dos Imóveis (Um por linha)</label>
+                                    <textarea
+                                        value={smartUrls}
+                                        onChange={e => setSmartUrls(e.target.value)}
+                                        rows={8}
+                                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-sm font-mono"
+                                        placeholder={`https://leilao.com/lote/1\nhttps://leilao.com/lote/2\n...`}
+                                        disabled={isProcessingSmart}
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={handleSmartImport}
+                                    disabled={isProcessingSmart || !smartUrls.trim()}
+                                    className="w-full py-3 bg-purple-600 text-white font-bold rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {isProcessingSmart ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" /> Processando... {Math.round(smartProgress)}%
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Brain className="w-5 h-5" /> Iniciar Análise e Importação
+                                        </>
+                                    )}
+                                </button>
+
+                                {/* Logs Area */}
+                                {smartLogs.length > 0 && (
+                                    <div className="bg-gray-900 rounded-lg p-4 font-mono text-xs max-h-60 overflow-y-auto">
+                                        {smartLogs.map((log, i) => (
+                                            <div key={i} className={`mb-1 ${log.includes('✅') ? 'text-green-400' : log.includes('❌') ? 'text-red-400' : log.includes('⚠️') ? 'text-yellow-400' : 'text-gray-300'}`}>
+                                                {log}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </>
                     )}
 
-                {successMsg && (
-                    <div className="mt-6 p-4 bg-green-50 text-green-700 rounded-md flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        {successMsg}
-                    </div>
-                )}
+                    {successMsg && (
+                        <div className="mt-6 p-4 bg-green-50 text-green-700 rounded-md flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                            {successMsg}
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
         </div >
     );
 };
