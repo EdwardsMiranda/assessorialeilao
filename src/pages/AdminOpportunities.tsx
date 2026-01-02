@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AnalysisStatus, Property } from '../types';
-import { Eye, DollarSign, AlertTriangle, Send, CheckSquare, MapPin, CreditCard, Gavel, Search, ArrowUpDown, Trophy, X, Calendar } from 'lucide-react';
+import { Eye, DollarSign, AlertTriangle, Send, CheckSquare, MapPin, CreditCard, Gavel, Search, ArrowUpDown, Trophy, X, Calendar, Users } from 'lucide-react';
 import { AnalysisModal } from '../components/AnalysisModal';
 
 export const AdminOpportunities: React.FC = () => {
@@ -289,6 +289,44 @@ export const AdminOpportunities: React.FC = () => {
                                                         </option>
                                                     ))}
                                                 </select>
+
+                                                {/* Client Suggestions */}
+                                                {matchedClients.length > 0 ? (
+                                                    <div className="mt-2 p-2 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+                                                        <p className="text-xs font-bold text-purple-800 mb-1.5 flex items-center gap-1">
+                                                            <Users className="w-3 h-3" /> Sugestões de Clientes
+                                                        </p>
+                                                        <div className="space-y-1">
+                                                            {matchedClients.slice(0, 3).map((client) => {
+                                                                const cityMatch = client.investmentThesis.cities.some((c: string) =>
+                                                                    data.cityState.toLowerCase().includes(c.toLowerCase())
+                                                                );
+                                                                const valueMatch = client.investmentThesis.maxBidValue >= data.initialBid;
+                                                                const paymentMatch = !client.investmentThesis.paymentMethods || client.investmentThesis.paymentMethods.length === 0 ||
+                                                                    client.investmentThesis.paymentMethods.some((pm: string) =>
+                                                                        data.paymentMethod.toLowerCase().includes(pm.toLowerCase())
+                                                                    );
+
+                                                                return (
+                                                                    <div key={client.id} className="text-xs bg-white/70 p-1.5 rounded border border-purple-100">
+                                                                        <p className="font-semibold text-purple-900">{client.name}</p>
+                                                                        <div className="flex flex-wrap gap-1 mt-0.5">
+                                                                            {cityMatch && <span className="text-[10px] text-green-700">✓ Cidade compatível</span>}
+                                                                            {valueMatch && <span className="text-[10px] text-green-700">✓ Valor dentro do orçamento</span>}
+                                                                            {paymentMatch && <span className="text-[10px] text-green-700">✓ Forma de pagamento aceita</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                                        <p className="text-xs text-gray-500 text-center italic">
+                                                            Nenhum cliente com essa tese
+                                                        </p>
+                                                    </div>
+                                                )}
 
                                                 <div className="flex items-center gap-2">
                                                     <input
