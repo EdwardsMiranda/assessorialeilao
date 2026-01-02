@@ -224,13 +224,53 @@ export const Inbox: React.FC = () => {
 
     // --- Smart Import Logic ---
     const handleSmartImport = async () => {
-        const urls = smartUrls.split('\n').filter(u => u.trim() !== '');
+        const urls = smartUrls.split('\n').filter((u: any) => u.trim() !== '');
         if (urls.length === 0) return;
 
         setIsProcessingSmart(true);
         setSmartLogs(['Iniciando análise inteligente...']);
         setSmartProgress(0);
 
+        await processSmartUrls(urls);
+    };
+
+    // Smart Import from Spreadsheet
+    const handleSmartFileUpload = async (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsProcessingSmart(true);
+        setSmartLogs(['📄 Processando planilha...']);
+        setSmartProgress(0);
+
+        try {
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data);
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+
+            // Extract URLs from first column
+            const urls: string[] = [];
+            for (let i = 1; i < rows.length; i++) { // Skip header
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
+                const url = row[0]?.toString().trim();
+                if (url) urls.push(url);
+            }
+
+            setSmartLogs(prev => [`📊 ${urls.length} URLs encontradas na planilha`, ...prev]);
+            await processSmartUrls(urls);
+
+        } catch (err) {
+            console.error(err);
+            setSmartLogs(['❌ Erro ao processar planilha']);
+            setIsProcessingSmart(false);
+        }
+    };
+
+    // Core Smart Import Processing Logic
+    const processSmartUrls = async (urls: string[]) => {
         let addedCount = 0;
 
         for (let i = 0; i < urls.length; i++) {
@@ -240,18 +280,18 @@ export const Inbox: React.FC = () => {
             try {
                 // 1. Check duplicate
                 if (findPropertyByUrl(currentUrl)) {
-                    setSmartLogs(prev => [`⚠️ [Duplicado] ${currentUrl}`, ...prev]);
+                    setSmartLogs((prev: any) => [`⚠️ [Duplicado] ${currentUrl}`, ...prev]);
                     continue;
                 }
 
-                setSmartLogs(prev => [`🔍 Analisando: ${currentUrl}...`, ...prev]);
+                setSmartLogs((prev: any) => [`🔍 Analisando: ${currentUrl}...`, ...prev]);
 
                 // 2. Extract Data via AI
                 const extractedData = await extractDataFromUrl(currentUrl);
 
                 // Check if extraction failed
                 if (!extractedData) {
-                    setSmartLogs(prev => [`❌ Erro ao extrair dados de: ${currentUrl}`, ...prev]);
+                    setSmartLogs((prev: any) => [`❌ Erro ao extrair dados de: ${currentUrl}`, ...prev]);
                     continue;
                 }
 
@@ -279,19 +319,19 @@ export const Inbox: React.FC = () => {
                     // The 'addProperty' simple signature doesn't support generic metadata update easily 
                     // without a secondary call, but let's keep it simple for now.
 
-                    setSmartLogs(prev => [`✅ MATCH! Cliente(s): ${clientIds.join(', ')} - ${reason}`, ...prev]);
+                    setSmartLogs((prev: any) => [`✅ MATCH! Cliente(s): ${clientIds.join(', ')} - ${reason}`, ...prev]);
                     addedCount++;
                 } else {
-                    setSmartLogs(prev => [`❌ [Sem Match] Descartado. (${reason})`, ...prev]);
+                    setSmartLogs((prev: any) => [`❌ [Sem Match] Descartado. (${reason})`, ...prev]);
                 }
 
             } catch (err) {
                 console.error(err);
-                setSmartLogs(prev => [`❌ [Erro] Falha ao processar ${currentUrl}`, ...prev]);
+                setSmartLogs((prev: any) => [`❌ [Erro] Falha ao processar ${currentUrl}`, ...prev]);
             }
         }
 
-        setSmartLogs(prev => [`🏁 Concluído! ${addedCount} imóveis importados de ${urls.length} analisados.`, ...prev]);
+        setSmartLogs((prev: any) => [`🏁 Concluído! ${addedCount} imóveis importados de ${urls.length} analisados.`, ...prev]);
         setIsProcessingSmart(false);
     };
 
@@ -597,50 +637,86 @@ export const Inbox: React.FC = () => {
                     ) : (
                         <>
                             <div className="mb-8 text-center">
-                                <div className="mx-auto w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 mb-4">
-                                    <Brain className="w-6 h-6" />
-                                </div>
-                                <h2 className="text-2xl font-bold text-gray-900">Importação Inteligente com IA</h2>
-                                <p className="text-gray-500 mt-2">Cole links e a IA filtrará apenas o que atende seus clientes.</p>
+                                <Brain className="w-16 h-16 mx-auto mb-4 text-purple-600" />
+                                <h2 className="text-2xl font-bold text-gray-800 mb-2">Importação Inteligente com IA</h2>
+                                <p className="text-gray-600">Cole URLs de imóveis ou envie uma planilha. A IA analisa e importa apenas os que combinam com seus clientes.</p>
                             </div>
 
-                            <div className="space-y-6">
-                                <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 text-sm text-purple-900">
-                                    <h4 className="font-bold flex items-center gap-2 mb-2"><Brain className="w-4 h-4" /> Como funciona?</h4>
-                                    <ul className="list-disc list-inside space-y-1 text-purple-800">
-                                        <li>Cole uma lista de links de leilões (um por linha).</li>
-                                        <li>A IA vai ler cada página e extrair os dados.</li>
-                                        <li>Em seguida, cruzará com a tese de todos os seus investidores.</li>
-                                        <li><strong>Apenas imóveis com "Match" serão importados.</strong></li>
-                                    </ul>
-                                </div>
+                            <div className="mb-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                <h3 className="font-semibold text-purple-900 mb-2 flex items-center">
+                                    <AlertTriangle className="w-5 h-5 mr-2" />
+                                    Como funciona?
+                                </h3>
+                                <ol className="text-sm text-purple-800 space-y-1 ml-5 list-decimal">
+                                    <li><strong>Extração Automática:</strong> A IA extrai dados (cidade, valor, tipo) de cada URL</li>
+                                    <li><strong>Análise de Match:</strong> Compara com as teses de investimento dos seus clientes</li>
+                                    <li><strong>Importação Seletiva:</strong> Só importa imóveis que tenham match com pelo menos 1 cliente</li>
+                                </ol>
+                            </div>
 
+                            <form onSubmit={(e: any) => { e.preventDefault(); handleSmartImport(); }} className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Links dos Imóveis (Um por linha)</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Opção 1: Cole URLs (uma por linha)
+                                    </label>
                                     <textarea
-                                        value={smartUrls}
-                                        onChange={e => setSmartUrls(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                         rows={8}
-                                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-sm font-mono"
-                                        placeholder={`https://leilao.com/lote/1\nhttps://leilao.com/lote/2\n...`}
+                                        placeholder="https://exemplo.com/imovel1&#10;https://exemplo.com/imovel2&#10;https://exemplo.com/imovel3"
+                                        value={smartUrls}
+                                        onChange={(e: any) => setSmartUrls(e.target.value)}
                                         disabled={isProcessingSmart}
                                     />
                                 </div>
 
+                                <div className="text-center text-gray-500 font-medium">OU</div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Opção 2: Envie uma planilha com URLs
+                                    </label>
+                                    <div className="border-2 border-dashed border-purple-300 rounded-lg p-6 text-center bg-purple-50">
+                                        <FileSpreadsheet className="w-10 h-10 mx-auto mb-2 text-purple-600" />
+                                        <p className="text-sm text-gray-700 mb-3">
+                                            Planilha deve ter URLs na <strong>primeira coluna</strong>
+                                        </p>
+                                        <input
+                                            type="file"
+                                            accept=".xlsx,.csv"
+                                            onChange={handleSmartFileUpload}
+                                            disabled={isProcessingSmart}
+                                            className="hidden"
+                                            id="smart-file-upload"
+                                        />
+                                        <label
+                                            htmlFor="smart-file-upload"
+                                            className={`inline-block px-4 py-2 rounded-lg font-medium cursor-pointer transition-colors ${isProcessingSmart
+                                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                : 'bg-purple-600 text-white hover:bg-purple-700'
+                                                }`}
+                                        >
+                                            📊 Selecionar Planilha
+                                        </label>
+                                        <p className="text-xs text-gray-500 mt-2">Formatos: .xlsx, .csv</p>
+                                    </div>
+                                </div>
+
                                 <button
-                                    onClick={handleSmartImport}
-                                    disabled={isProcessingSmart || !smartUrls.trim()}
-                                    className="w-full py-3 bg-purple-600 text-white font-bold rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                >
-                                    {isProcessingSmart ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 animate-spin" /> Processando... {Math.round(smartProgress)}%
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Brain className="w-5 h-5" /> Iniciar Análise e Importação
-                                        </>
-                                    )}
+                                    type="submit"
+                                    disabled={isProcessingSmart || smartUrls.trim() === ''}
+                                    className={`w-full py-3 px-4 rounded-lg font-semibold flex items-center justify-center transition-colors ${isProcessingSmart || smartUrls.trim() === ''
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                                        }`}
+                                >            {isProcessingSmart ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" /> Processando... {Math.round(smartProgress)}%
+                                    </>
+                                ) : (
+                                    <>
+                                        <Brain className="w-5 h-5" /> Iniciar Análise e Importação
+                                    </>
+                                )}
                                 </button>
 
                                 {/* Logs Area */}
@@ -653,7 +729,7 @@ export const Inbox: React.FC = () => {
                                         ))}
                                     </div>
                                 )}
-                            </div>
+                            </form>
                         </>
                     )}
 
