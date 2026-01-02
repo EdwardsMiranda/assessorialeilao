@@ -44,7 +44,7 @@ export const Clients: React.FC = () => {
         setCities(client.investmentThesis.cities.join(', '));
         setMaxBid(client.investmentThesis.maxBidValue.toString());
         setNotes(client.investmentThesis.notes || '');
-        setSelectedPaymentMethods(client.investmentThesis.paymentMethods);
+        setSelectedPaymentMethods(client.investmentThesis.paymentMethods || []);
     };
 
     const handleSave = async (e: React.FormEvent) => {
