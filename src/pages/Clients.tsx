@@ -2,11 +2,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Client } from '../types';
-import { UserPlus, Search, Trash2, Phone, Mail, MapPin, DollarSign, Briefcase, Sparkles } from 'lucide-react';
+import { UserPlus, Search, Trash2, Phone, Mail, MapPin, DollarSign, Briefcase, Sparkles, Edit, X } from 'lucide-react';
 import { expandInvestmentThesis } from '../services/geminiService';
 
 export const Clients: React.FC = () => {
-    const { clients, addClient, removeClient } = useApp();
+    const { clients, addClient, removeClient, updateClient } = useApp();
     const [searchTerm, setSearchTerm] = useState('');
 
     // New Client Form
@@ -18,6 +18,7 @@ export const Clients: React.FC = () => {
     const [notes, setNotes] = useState('');
     const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<string[]>([]);
     const [isExpanding, setIsExpanding] = useState(false);
+    const [editingClient, setEditingClient] = useState<Client | null>(null);
 
     const handleAiExpand = async () => {
         if (!cities) return;
@@ -30,27 +31,59 @@ export const Clients: React.FC = () => {
         setIsExpanding(false);
     };
 
-    const handleAdd = (e: React.FormEvent) => {
+    const handleCancelEdit = () => {
+        setEditingClient(null);
+        setName(''); setPhone(''); setEmail(''); setCities(''); setMaxBid(''); setNotes(''); setSelectedPaymentMethods([]);
+    };
+
+    const handleEdit = (client: Client) => {
+        setEditingClient(client);
+        setName(client.name);
+        setPhone(client.phone);
+        setEmail(client.email || '');
+        setCities(client.investmentThesis.cities.join(', '));
+        setMaxBid(client.investmentThesis.maxBidValue.toString());
+        setNotes(client.investmentThesis.notes || '');
+        setSelectedPaymentMethods(client.investmentThesis.paymentMethods);
+    };
+
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !phone) return;
 
-        const newClient: Client = {
-            id: Date.now().toString(),
-            name,
-            phone,
-            email,
-            investmentThesis: {
-                cities: cities.split(',').map(c => c.trim()).filter(Boolean),
-                maxBidValue: parseFloat(maxBid) || 0,
-                paymentMethods: selectedPaymentMethods,
-                notes
-            },
-            addedAt: new Date().toISOString()
-        };
-        addClient(newClient);
-
-        // Reset
-        setName(''); setPhone(''); setEmail(''); setCities(''); setMaxBid(''); setNotes(''); setSelectedPaymentMethods([]);
+        if (editingClient) {
+            // Update
+            await updateClient(editingClient.id, {
+                name,
+                phone,
+                email,
+                investmentThesis: {
+                    cities: cities.split(',').map(c => c.trim()).filter(Boolean),
+                    maxBidValue: parseFloat(maxBid) || 0,
+                    paymentMethods: selectedPaymentMethods,
+                    notes
+                }
+            });
+            handleCancelEdit(); // Reset form
+        } else {
+            // Create
+            const newClient: Client = {
+                id: Date.now().toString(),
+                name,
+                phone,
+                email,
+                investmentThesis: {
+                    cities: cities.split(',').map(c => c.trim()).filter(Boolean),
+                    maxBidValue: parseFloat(maxBid) || 0,
+                    paymentMethods: selectedPaymentMethods,
+                    notes
+                },
+                addedAt: new Date().toISOString()
+            };
+            addClient(newClient);
+            // Reset
+            setName(''); setPhone(''); setEmail(''); setCities(''); setMaxBid(''); setNotes(''); setSelectedPaymentMethods([]);
+        }
     };
 
     const filteredClients = clients.filter(c =>
@@ -72,9 +105,10 @@ export const Clients: React.FC = () => {
                 {/* Add Form */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-fit">
                     <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <UserPlus className="w-5 h-5 text-green-600" /> Cadastrar Investidor
+                        {editingClient ? <Edit className="w-5 h-5 text-indigo-600" /> : <UserPlus className="w-5 h-5 text-green-600" />}
+                        {editingClient ? 'Editar Investidor' : 'Cadastrar Investidor'}
                     </h3>
-                    <form onSubmit={handleAdd} className="space-y-4">
+                    <form onSubmit={handleSave} className="space-y-4">
                         <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">Nome Completo</label>
                             <input
@@ -165,12 +199,23 @@ export const Clients: React.FC = () => {
                             </div>
                         </div>
 
-                        <button
-                            type="submit"
-                            className="w-full py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700"
-                        >
-                            Salvar Investidor
-                        </button>
+                        <div className="flex gap-2">
+                            {editingClient && (
+                                <button
+                                    type="button"
+                                    onClick={handleCancelEdit}
+                                    className="w-full py-2 bg-gray-200 text-gray-700 font-bold rounded hover:bg-gray-300 flex items-center justify-center gap-2"
+                                >
+                                    <X className="w-4 h-4" /> Cancelar
+                                </button>
+                            )}
+                            <button
+                                type="submit"
+                                className={`w-full py-2 font-bold rounded text-white ${editingClient ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-green-600 hover:bg-green-700'}`}
+                            >
+                                {editingClient ? 'Atualizar' : 'Salvar Investidor'}
+                            </button>
+                        </div>
                     </form>
                 </div>
 
@@ -197,13 +242,22 @@ export const Clients: React.FC = () => {
                         ) : (
                             filteredClients.map(client => (
                                 <div key={client.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow relative group">
-                                    <button
-                                        onClick={() => removeClient(client.id)}
-                                        className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                        title="Remover"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={() => handleEdit(client)}
+                                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                                            title="Editar"
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => removeClient(client.id)}
+                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                            title="Remover"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
 
                                     <div className="flex items-center gap-3 mb-3">
                                         <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">

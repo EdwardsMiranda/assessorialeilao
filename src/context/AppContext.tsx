@@ -19,6 +19,7 @@ interface AppContextType {
 
   // CRM
   addClient: (client: Client) => Promise<void>;
+  updateClient: (clientId: string, updates: Partial<Client>) => Promise<void>;
   removeClient: (clientId: string) => Promise<void>;
 
   // Properties & Files
@@ -201,6 +202,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (success) {
       await refreshClients();
     }
+    if (success) {
+      await refreshClients();
+    }
+  };
+
+  const updateClient = async (clientId: string, updates: Partial<Client>): Promise<void> => {
+    const { success, error } = await clientService.update(clientId, updates);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshClients();
+    }
   };
 
   // --- PROPERTY ACTIONS ---
@@ -332,7 +347,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     <AppContext.Provider value={{
       currentUser, users, properties, clients, isAuthenticated, isLoading,
       login, createUser, logout, updateUserRole, toggleUserBlock,
-      addClient, removeClient,
+      addClient, removeClient, updateClient,
       findPropertyByUrl, addProperty, addProperties, claimProperty, updateStatus, updateManagerDispatch, markAsSold, getStats,
       uploadDocument
     }}>
