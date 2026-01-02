@@ -225,17 +225,44 @@ export const extractDataFromUrl = async (url: string): Promise<{
   }
 
   try {
-    // 1. Fetch HTML content via CORS Proxy
+    // 1. Fetch HTML content via multiple CORS Proxies (Fallback strategy)
     console.log('[extractDataFromUrl] Buscando conteúdo via proxy...');
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    const fetchResponse = await fetch(proxyUrl);
 
-    if (!fetchResponse.ok) {
-      console.error("[extractDataFromUrl] Falha ao buscar URL via proxy. Status:", fetchResponse.status);
+    // Lista de proxies para tentar em ordem
+    const proxies = [
+      (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+      (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
+    ];
+
+    let htmlText = '';
+    let fetchSuccess = false;
+
+    for (const proxyGenerator of proxies) {
+      try {
+        const proxyUrl = proxyGenerator(url);
+        console.log(`[extractDataFromUrl] Tentando proxy: ${proxyUrl}`);
+
+        const fetchResponse = await fetch(proxyUrl);
+        if (fetchResponse.ok) {
+          htmlText = await fetchResponse.text();
+          if (htmlText && htmlText.length > 100) {
+            console.log('[extractDataFromUrl] Sucesso com proxy!');
+            fetchSuccess = true;
+            break; // Sai do loop se der certo
+          }
+        } else {
+          console.warn(`[extractDataFromUrl] Falha no proxy (Status ${fetchResponse.status}): ${proxyUrl}`);
+        }
+      } catch (err) {
+        console.warn(`[extractDataFromUrl] Erro de conexão com proxy:`, err);
+      }
+    }
+
+    if (!fetchSuccess || !htmlText) {
+      console.error("[extractDataFromUrl] Todas as tentativas de proxy falharam.");
       return null;
     }
 
-    const htmlText = await fetchResponse.text();
     console.log('[extractDataFromUrl] HTML obtido, tamanho:', htmlText.length, 'caracteres');
 
     // Limit HTML size to avoid token limits (approx 20k chars should be enough for main content)
