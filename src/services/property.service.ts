@@ -369,6 +369,29 @@ export const propertyService = {
             return { success: false, error: 'Erro ao marcar como arrematado' };
         }
     },
+    /**
+     * Delete property
+     */
+    async delete(propertyId: string): Promise<{ success: boolean; error: string | null }> {
+        try {
+            // First delete related analysis to avoid constraint errors (though cascading might handle it, explicit is safer)
+            await supabase.from('property_analysis').delete().eq('property_id', propertyId);
+
+            const { error } = await supabase
+                .from('properties')
+                .delete()
+                .eq('id', propertyId);
+
+            if (error) {
+                return { success: false, error: error.message };
+            }
+
+            return { success: true, error: null };
+        } catch (error) {
+            console.error('Delete property error:', error);
+            return { success: false, error: 'Erro ao remover propriedade' };
+        }
+    },
 };
 
 // Helper functions to map between DB and App types

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AnalysisStatus } from '../types';
-import { Hand, ExternalLink, Calendar, AlertCircle, ArrowUpDown, LayoutGrid, List } from 'lucide-react';
+import { Hand, ExternalLink, Calendar, AlertCircle, ArrowUpDown, LayoutGrid, List, Trash2 } from 'lucide-react';
 import { formatDate } from '../utils/formatters';
 
 export const Marketplace: React.FC = () => {
-    const { properties, claimProperty } = useApp();
+    const { properties, claimProperty, deleteProperty, currentUser } = useApp();
 
     // Local State for Filters (Independent per user session)
     const [sortBy, setSortBy] = useState<'date' | 'modality' | 'created'>('date');
@@ -55,6 +55,11 @@ export const Marketplace: React.FC = () => {
             // Fail: Likely race condition where someone else took it milliseconds ago
             alert("Atenção: Este imóvel acabou de ser selecionado por outro analista e não está mais disponível.");
         }
+    };
+
+    const handleDelete = async (propertyId: string) => {
+        if (!window.confirm('Tem certeza que deseja excluir esta oportunidade? Esta ação não pode ser desfeita.')) return;
+        await deleteProperty(propertyId);
     };
 
     return (
@@ -139,7 +144,21 @@ export const Marketplace: React.FC = () => {
                                                         <AlertCircle className="w-3 h-3" /> Urgente
                                                     </span>
                                                 )}
+                                                )}
                                             </div>
+
+                                            {currentUser?.role === 'Gestor' && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(prop.id);
+                                                    }}
+                                                    className="absolute top-4 right-4 p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                                    title="Excluir Oportunidade"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
 
                                             <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2" title={prop.title}>
                                                 {prop.title}
@@ -219,7 +238,16 @@ export const Marketplace: React.FC = () => {
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                         {formatDate(prop.addedAt)}
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-2">
+                                                        {currentUser?.role === 'Gestor' && (
+                                                            <button
+                                                                onClick={() => handleDelete(prop.id)}
+                                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                                title="Excluir"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() => handleClaim(prop.id)}
                                                             className={`px-3 py-1.5 border border-transparent rounded text-xs font-bold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${urgent ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'}`}

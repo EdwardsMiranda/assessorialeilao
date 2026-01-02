@@ -7,9 +7,12 @@ export const formatCurrency = (val: number | undefined | null) => {
 export const formatDate = (dateString: string) => {
   if (!dateString || dateString.trim() === '') return 'Data N/D';
 
-  // Parse the date string and format it without timezone conversion
-  // This prevents the "one day off" issue caused by UTC to local timezone conversion
-  const date = new Date(dateString + 'T00:00:00'); // Force local timezone interpretation
+  // Check if it's already an ISO string (has 'T') or just YYYY-MM-DD
+  const dateToParse = dateString.includes('T')
+    ? dateString
+    : dateString + 'T00:00:00';
+
+  const date = new Date(dateToParse);
 
   // Check if date is valid
   if (isNaN(date.getTime())) return 'Data N/D';

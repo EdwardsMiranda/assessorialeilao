@@ -37,6 +37,8 @@ interface AppContextType {
   ) => Promise<void>;
   updateManagerDispatch: (propertyId: string, recipient: string, sent: boolean, clientId?: string) => Promise<void>;
   markAsSold: (propertyId: string, soldDate: string, soldAmount: number, buyerName: string) => Promise<void>;
+
+  deleteProperty: (propertyId: string) => Promise<void>;
   getStats: () => { total: number; pending: number; inProgress: number; completed: number; aborted: number; sold: number };
 
   // File Management
@@ -317,6 +319,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const deleteProperty = async (propertyId: string): Promise<void> => {
+    if (!currentUser) return;
+    const { success, error } = await propertyService.delete(propertyId);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshProperties();
+    }
+  };
+
   // --- FILE MANAGEMENT ---
   const uploadDocument = async (propertyId: string, file: File, docType: string): Promise<string> => {
     return new Promise((resolve) => {
@@ -348,7 +362,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       currentUser, users, properties, clients, isAuthenticated, isLoading,
       login, createUser, logout, updateUserRole, toggleUserBlock,
       addClient, removeClient, updateClient,
-      findPropertyByUrl, addProperty, addProperties, claimProperty, updateStatus, updateManagerDispatch, markAsSold, getStats,
+      findPropertyByUrl, addProperty, addProperties, claimProperty, updateStatus, updateManagerDispatch, markAsSold, deleteProperty, getStats,
       uploadDocument
     }}>
       {children}
