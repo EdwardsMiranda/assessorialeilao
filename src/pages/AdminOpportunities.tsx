@@ -248,8 +248,8 @@ export const AdminOpportunities: React.FC = () => {
                                                                 data.cityState.toLowerCase().includes(c.toLowerCase())
                                                             );
                                                             const valueMatch = client.investmentThesis.maxBidValue >= data.initialBid;
-                                                            const paymentMatch = !client.paymentMethods || client.paymentMethods.length === 0 ||
-                                                                client.paymentMethods.some((pm: string) =>
+                                                            const paymentMatch = !client.investmentThesis.paymentMethods || client.investmentThesis.paymentMethods.length === 0 ||
+                                                                client.investmentThesis.paymentMethods.some((pm: string) =>
                                                                     data.paymentMethod.toLowerCase().includes(pm.toLowerCase())
                                                                 );
 
