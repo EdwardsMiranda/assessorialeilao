@@ -5,7 +5,7 @@ import { AuctionModality } from '../types';
 import { Plus, Link as LinkIcon, Building, Calendar, FileSpreadsheet, Upload, Download, AlertTriangle, CheckCircle, Copy, Brain, Loader2 } from 'lucide-react';
 import { formatDate } from '../utils/formatters';
 import * as XLSX from 'xlsx';
-import { geminiService } from '../services/geminiService';
+import { extractDataFromUrl, checkPropertyFit } from '../services/geminiService';
 
 
 export const Inbox: React.FC = () => {
@@ -247,10 +247,10 @@ export const Inbox: React.FC = () => {
                 setSmartLogs(prev => [`🔍 Analisando: ${currentUrl}...`, ...prev]);
 
                 // 2. Extract Data via AI
-                const extractedData = await geminiService.extractDataFromUrl(currentUrl);
+                const extractedData = await extractDataFromUrl(currentUrl);
 
                 // 3. Check Fit with Clients
-                const { matched, clientIds, reason } = await geminiService.checkPropertyFit(extractedData, clients);
+                const { matched, clientIds, reason } = await checkPropertyFit(extractedData, clients);
 
                 if (matched) {
                     // 4. Add Property

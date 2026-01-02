@@ -316,4 +316,70 @@ export const expandInvestmentThesis = async (text: string): Promise<string[]> =>
   }
 };
 
+/**
+ * Checks if a property matches any client's investment thesis
+ */
+export const checkPropertyFit = async (propertyData: any, clients: any[]): Promise<{ matched: boolean; clientIds: string[]; reason: string }> {
+  const ai = getClient();
+  if (!ai) return { matched: false, clientIds: [], reason: 'Erro configuração IA' };
+
+  try {
+    if (clients.length === 0) return { matched: false, clientIds: [], reason: 'Sem clientes cadastrados' };
+
+    const clientsList = clients.map(c =>
+      `- ID: ${c.id}\n  Nome: ${c.name}\n  Tese/Interesses: ${c.investmentThesis || 'Não informado'}\n  Pagamento: ${c.paymentMethods?.join(', ') || 'Todos'}`
+    ).join('\n\n');
+
+    const prompt = `
+      Você é um consultor de investimentos imobiliários.
+      Analise se o imóvel abaixo se encaixa na tese de investimento de algum dos clientes listados.
+
+      DADOS DO IMÓVEL:
+      - Título: ${propertyData.title}
+      - Cidade/UF: ${propertyData.cityState}
+      - Bairro: ${propertyData.neighborhood || 'Não informado'}
+      - Valor Lance: R$ ${propertyData.initialBid}
+      - Valor Avaliação: R$ ${propertyData.bankValuation}
+      - Tipo: ${propertyData.propertyType || 'Indefinido'}
+      - Condomínio: ${propertyData.condoName || 'Não informado'}
+
+      CLIENTES E TESES:
+      ${clientsList}
+
+      REGRAS DE MATCH:
+      1. Região/Cidade deve ser compatível.
+      2. Valor deve estar dentro do poder de compra (se mencionado na tese).
+      3. Tipo de imóvel deve ser compatível (comercial, residencial, terreno, etc).
+
+      SAÍDA ESPERADA (JSON):
+      {
+        "matched": boolean,
+        "clientIds": ["id1", "id2"],
+        "reason": "Explicação breve de porque deu match ou porque não deu"
+      }
+      
+      Responda APENAS o JSON.
+      `;
+
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt
+    });
+    const text = result.text || "{}";
+
+    // Clean up code blocks if present
+    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleanText);
+
+    return {
+      matched: parsed.matched || false,
+      clientIds: parsed.clientIds || [],
+      reason: parsed.reason || ''
+    };
+  } catch (error) {
+    console.error('Gemini Match error:', error);
+    return { matched: false, clientIds: [], reason: 'Erro na análise de IA' };
+  }
+};
+
 
