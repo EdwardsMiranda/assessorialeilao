@@ -331,11 +331,23 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
             // 3. We haven't filled main fields yet (avoid overwriting user work)
             const isFreshAnalysis = !formData.cityState && !formData.privateArea && !formData.initialBid;
 
+            console.log('[AUTO-FILL] Verificando condições:', {
+                hasUrl: !!property.url,
+                isFreshAnalysis,
+                isFinalized,
+                isReadOnly,
+                isAutoFillThinking
+            });
+
             if (property.url && isFreshAnalysis && !isFinalized && !isReadOnly && !isAutoFillThinking) {
+                console.log('[AUTO-FILL] Iniciando extração para URL:', property.url);
                 setIsAutoFillThinking(true);
                 try {
                     const data = await extractDataFromUrl(property.url);
+                    console.log('[AUTO-FILL] Dados extraídos:', data);
+
                     if (data) {
+                        console.log('[AUTO-FILL] Aplicando dados ao formulário...');
                         setFormData(prev => ({
                             ...prev,
                             cityState: data.cityState || prev.cityState,
@@ -376,14 +388,17 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                 if (rate) setFormData(prev => ({ ...prev, itbiRate: rate }));
                             });
                         }
+                        console.log('[AUTO-FILL] ✅ Dados aplicados com sucesso!');
                     } else {
-                        console.warn('[AUTO-FILL] Nenhum dado foi extraído da URL');
+                        console.warn('[AUTO-FILL] ⚠️ Nenhum dado foi extraído da URL');
                     }
                 } catch (err) {
-                    // console.error("[AUTO-FILL] Erro no auto-preenchimento:", err); // Removed debug log
+                    console.error('[AUTO-FILL] ❌ Erro no auto-preenchimento:', err);
                 } finally {
                     setIsAutoFillThinking(false);
                 }
+            } else {
+                console.log('[AUTO-FILL] Condições não atendidas, pulando auto-fill');
             }
         };
 
