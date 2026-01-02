@@ -319,7 +319,7 @@ export const expandInvestmentThesis = async (text: string): Promise<string[]> =>
 /**
  * Checks if a property matches any client's investment thesis
  */
-export const checkPropertyFit = async (propertyData: any, clients: any[]): Promise<{ matched: boolean; clientIds: string[]; reason: string }> {
+export const checkPropertyFit = async (propertyData: any, clients: any[]): Promise<{ matched: boolean; clientIds: string[]; reason: string }> => {
   const ai = getClient();
   if (!ai) return { matched: false, clientIds: [], reason: 'Erro configuração IA' };
 
