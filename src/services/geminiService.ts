@@ -217,20 +217,26 @@ export const extractDataFromUrl = async (url: string): Promise<{
   condoDebtRule: boolean,
   paymentTerms: string[]
 } | null> => {
+  console.log('[extractDataFromUrl] Iniciando extração para:', url);
   const ai = getClient();
-  if (!ai) return null;
+  if (!ai) {
+    console.error('[extractDataFromUrl] Cliente Gemini não disponível');
+    return null;
+  }
 
   try {
     // 1. Fetch HTML content via CORS Proxy
+    console.log('[extractDataFromUrl] Buscando conteúdo via proxy...');
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
     const fetchResponse = await fetch(proxyUrl);
 
     if (!fetchResponse.ok) {
-      console.error("Failed to fetch URL content via proxy");
+      console.error("[extractDataFromUrl] Falha ao buscar URL via proxy. Status:", fetchResponse.status);
       return null;
     }
 
     const htmlText = await fetchResponse.text();
+    console.log('[extractDataFromUrl] HTML obtido, tamanho:', htmlText.length, 'caracteres');
 
     // Limit HTML size to avoid token limits (approx 20k chars should be enough for main content)
     // We try to grab the body content
@@ -240,6 +246,8 @@ export const extractDataFromUrl = async (url: string): Promise<{
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .substring(0, 20000);
+
+    console.log('[extractDataFromUrl] Conteúdo limpo, tamanho:', cleanedContent.length, 'caracteres');
 
     // 2. Ask Gemini to extract data
     const prompt = `
@@ -264,25 +272,22 @@ export const extractDataFromUrl = async (url: string): Promise<{
       Retorne apenas o JSON, sem markdown.
     `;
 
+    console.log('[extractDataFromUrl] Enviando para Gemini...');
     const aiResponse = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
+
     const text = aiResponse.text || "{}";
+    console.log('[extractDataFromUrl] Resposta do Gemini:', text);
+
     const jsonStr = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(jsonStr);
+    const result = JSON.parse(jsonStr);
+    console.log('[extractDataFromUrl] ✅ Dados extraídos com sucesso:', result);
+    return result;
   } catch (error) {
-    console.error("Erro ao extrair dados da URL:", error);
-    return {
-      cityState: '',
-      condoName: '',
-      address: '',
-      privateArea: 0,
-      initialBid: 0,
-      bankValuation: 0,
-      condoDebtRule: false,
-      paymentTerms: []
-    };
+    console.error("[extractDataFromUrl] ❌ Erro ao extrair dados da URL:", error);
+    return null;
   }
 };
 
