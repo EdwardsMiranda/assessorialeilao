@@ -22,7 +22,11 @@ export const MyWork: React.FC = () => {
   // Apply Filters and Sort
   const filteredAndSortedProperties = myProperties
     .filter(p => {
-      const matchesSearch = p.title?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
+      const searchStr = searchTerm.toLowerCase();
+      const matchesSearch =
+        p.title?.toLowerCase().includes(searchStr) ||
+        p.displayId?.toLowerCase().includes(searchStr) ||
+        false;
       const matchesStatus = statusFilter === 'all' ? true : p.status === statusFilter;
 
       // Month Filter Logic (Auction Date) - skip empty dates
@@ -156,7 +160,12 @@ export const MyWork: React.FC = () => {
                   <tr key={prop.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-900">{prop.title}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 uppercase">
+                            {prop.displayId}
+                          </span>
+                          <span className="text-sm font-medium text-gray-900">{prop.title}</span>
+                        </div>
                         <div className="flex items-center gap-2">
                           <a href={prop.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1 mt-1">
                             Ver link <ExternalLink className="w-3 h-3" />

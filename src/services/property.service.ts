@@ -24,6 +24,7 @@ export const propertyService = {
                 const analysisRaw = Array.isArray(p.property_analysis) ? p.property_analysis[0] : p.property_analysis;
                 return {
                     id: p.id,
+                    displayId: generateDisplayId(p.id),
                     url: p.url,
                     modality: p.modality as AuctionModality,
                     auctionDate: p.auction_date,
@@ -73,6 +74,7 @@ export const propertyService = {
 
             const property: Property = {
                 id: data.id,
+                displayId: generateDisplayId(data.id),
                 url: data.url,
                 modality: data.modality as AuctionModality,
                 auctionDate: data.auction_date,
@@ -535,4 +537,13 @@ function mapAnalysisDataToDb(data: PropertyAnalysisData): any {
         final_roi: data.finalRoi,
         final_net_profit: data.finalNetProfit,
     };
+}
+
+/**
+ * Generates a short, readable display ID from a UUID
+ * Format: LI-XXXXXX (first 6 chars of UUID uppercase)
+ */
+function generateDisplayId(uuid: string): string {
+    if (!uuid) return 'LI-000000';
+    return `LI-${uuid.substring(0, 6).toUpperCase()}`;
 }

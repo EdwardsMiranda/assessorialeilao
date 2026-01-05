@@ -901,7 +901,10 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50 flex-shrink-0">
                     <div>
-                        <h3 className="text-lg font-bold text-gray-900">{property.title}</h3>
+                        <h3 className="text-lg font-bold text-gray-900">
+                            <span className="text-blue-600 mr-2">{property.displayId}</span>
+                            {property.title}
+                        </h3>
                         <div className="flex items-center gap-4 mt-1 text-sm">
                             <span className="text-gray-600 flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />

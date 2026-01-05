@@ -131,6 +131,7 @@ export interface ManagerDispatch {
 
 export interface Property {
   id: string;
+  displayId?: string;
   url: string;
   modality: AuctionModality;
   auctionDate: string; // ISO Date string (YYYY-MM-DD), can be empty for Venda Direta

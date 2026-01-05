@@ -227,6 +227,11 @@ export const Marketplace: React.FC = () => {
                                                 </button>
                                             )}
 
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 uppercase">
+                                                    {prop.displayId}
+                                                </span>
+                                            </div>
                                             <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2" title={prop.title}>
                                                 {prop.title}
                                             </h3>
@@ -276,6 +281,7 @@ export const Marketplace: React.FC = () => {
                                                     />
                                                 </th>
                                             )}
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cód</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modalidade</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imóvel / Link</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Leilão</th>
@@ -298,6 +304,11 @@ export const Marketplace: React.FC = () => {
                                                             />
                                                         </td>
                                                     )}
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 uppercase">
+                                                            {prop.displayId}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                                             {prop.modality}
