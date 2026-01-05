@@ -14,7 +14,7 @@ export const storageService = {
             const cleanFileName = `${folder}/${propertyId}_${Date.now()}.${extension}`;
             const bucketName = 'property-documents';
 
-            const { data, error } = await supabase.storage
+            const { error } = await supabase.storage
                 .from(bucketName)
                 .upload(cleanFileName, file, {
                     cacheControl: '3600',
