@@ -99,9 +99,15 @@ export const LinkOrUploadInput: React.FC<LinkOrUploadInputProps> = ({
           />
           {isUploading && <span className="text-[10px] text-blue-600 animate-pulse">Enviando e renomeando...</span>}
           {value.startsWith('[ARQUIVO]') && !isUploading && (
-            <p className="mt-1 text-[10px] text-green-600 flex items-center gap-1 truncate" title={value.replace('[ARQUIVO] ', '')}>
-              <FileText className="w-3 h-3" /> {value.replace('[ARQUIVO] ', '')}
-            </p>
+            <a
+              href={value.replace('[ARQUIVO] ', '').trim()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 text-[10px] text-blue-600 hover:text-blue-800 flex items-center gap-1 truncate font-medium underline"
+              title="Abrir arquivo enviado"
+            >
+              <FileText className="w-3 h-3" /> Visualizar Arquivo Enviado
+            </a>
           )}
         </div>
       )}

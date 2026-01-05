@@ -3,6 +3,7 @@ import { Property, User, UserRole, AnalysisStatus, AuctionModality, PropertyAnal
 import { authService } from '../services/auth.service';
 import { propertyService } from '../services/property.service';
 import { clientService } from '../services/client.service';
+import { storageService } from '../services/storage.service';
 
 interface AppContextType {
   currentUser: User | null;
@@ -39,6 +40,7 @@ interface AppContextType {
   markAsSold: (propertyId: string, soldDate: string, soldAmount: number, buyerName: string) => Promise<void>;
 
   deleteProperty: (propertyId: string) => Promise<void>;
+  deletePropertiesBulk: (propertyIds: string[]) => Promise<void>;
   getStats: () => { total: number; pending: number; inProgress: number; completed: number; aborted: number; sold: number };
 
   // File Management
@@ -331,20 +333,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const deletePropertiesBulk = async (propertyIds: string[]): Promise<void> => {
+    if (!currentUser) return;
+    const { success, error } = await propertyService.deleteBulk(propertyIds);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (success) {
+      await refreshProperties();
+    }
+  };
+
   // --- FILE MANAGEMENT ---
   const uploadDocument = async (propertyId: string, file: File, docType: string): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const extension = file.name.split('.').pop() || 'dat';
-        const cleanDocType = docType.toUpperCase().replace(/[^A-Z0-9]/g, '_');
-        const newFileName = `PROP-${propertyId}_${cleanDocType}_${Date.now()}.${extension}`;
+    const folder = docType.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const { url, error } = await storageService.uploadFile(propertyId, file, folder);
 
-        console.log(`[File System] Arquivo salvo: ${newFileName}`);
-        resolve(newFileName);
-      };
-      reader.readAsDataURL(file);
-    });
+    if (error) {
+      alert(`Erro no upload: ${error}`);
+      return '';
+    }
+
+    return url || '';
   };
 
   const getStats = () => {
@@ -362,7 +373,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       currentUser, users, properties, clients, isAuthenticated, isLoading,
       login, createUser, logout, updateUserRole, toggleUserBlock,
       addClient, removeClient, updateClient,
-      findPropertyByUrl, addProperty, addProperties, claimProperty, updateStatus, updateManagerDispatch, markAsSold, deleteProperty, getStats,
+      findPropertyByUrl, addProperty, addProperties, claimProperty, updateStatus, updateManagerDispatch, markAsSold, deleteProperty, deletePropertiesBulk, getStats,
       uploadDocument
     }}>
       {children}

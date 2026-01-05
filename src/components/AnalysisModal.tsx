@@ -127,9 +127,15 @@ const LinkOrUploadInput = ({
                     />
                     {isUploading && <span className="text-[10px] text-blue-600 animate-pulse">Enviando e analisando...</span>}
                     {value.startsWith('[ARQUIVO]') && !isUploading && (
-                        <p className="mt-1 text-[10px] text-green-600 flex items-center gap-1 truncate" title={value.replace('[ARQUIVO] ', '')}>
-                            <FileText className="w-3 h-3" /> {value.replace('[ARQUIVO] ', '')}
-                        </p>
+                        <a
+                            href={value.replace('[ARQUIVO] ', '').trim()}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 text-[10px] text-blue-600 hover:text-blue-800 flex items-center gap-1 truncate font-medium underline"
+                            title="Abrir arquivo enviado"
+                        >
+                            <FileText className="w-3 h-3" /> Visualizar Arquivo Enviado
+                        </a>
                     )}
                 </div>
             )}
@@ -483,7 +489,8 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                         // We don't have a field for "Mirror Image" here, but we could add if needed
                     }));
 
-                    setVisionFeedback({ type: 'success', message: `Dados lidos e arquivo salvo: ${savedName} ` });
+                    updateField('bankMirror', `[ARQUIVO] ${savedName}`);
+                    setVisionFeedback({ type: 'success', message: `Dados lidos e arquivo salvo com sucesso!` });
 
                     // Trigger ITBI fetch automatically if city found
                     if (result.cityState) {

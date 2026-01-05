@@ -5,7 +5,10 @@ import { Hand, ExternalLink, Calendar, AlertCircle, ArrowUpDown, LayoutGrid, Lis
 import { formatDate } from '../utils/formatters';
 
 export const Marketplace: React.FC = () => {
-    const { properties, claimProperty, deleteProperty, currentUser } = useApp();
+    const { properties, claimProperty, deleteProperty, deletePropertiesBulk, currentUser } = useApp();
+
+    // Local State for Selection
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
     // Local State for Filters (Independent per user session)
     const [sortBy, setSortBy] = useState<'date' | 'modality' | 'created'>('date');
@@ -60,6 +63,28 @@ export const Marketplace: React.FC = () => {
     const handleDelete = async (propertyId: string) => {
         if (!window.confirm('Tem certeza que deseja excluir esta oportunidade? Esta ação não pode ser desfeita.')) return;
         await deleteProperty(propertyId);
+    };
+
+    const handleToggleSelect = (id: string) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAll = () => {
+        if (selectedIds.length === sortedProperties.length && sortedProperties.length > 0) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(sortedProperties.map(p => p.id));
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!window.confirm(`Tem certeza que deseja excluir ${selectedIds.length} imóveis selecionados? Esta ação não pode ser desfeita.`)) return;
+
+        await deletePropertiesBulk(selectedIds);
+        setSelectedIds([]);
     };
 
     return (
@@ -122,6 +147,38 @@ export const Marketplace: React.FC = () => {
                 </div>
             </div>
 
+            {/* Bulk Actions Bar */}
+            {currentUser?.role === 'Gestor' && sortedProperties.length > 0 && (
+                <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.length === sortedProperties.length && sortedProperties.length > 0}
+                                onChange={handleSelectAll}
+                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Selecionar Todos</span>
+                        </label>
+                        {selectedIds.length > 0 && (
+                            <span className="text-sm text-gray-500 font-medium">
+                                {selectedIds.length} selecionado(s)
+                            </span>
+                        )}
+                    </div>
+
+                    {selectedIds.length > 0 && (
+                        <button
+                            onClick={handleBulkDelete}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md text-sm font-bold transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Excluir Selecionados
+                        </button>
+                    )}
+                </div>
+            )}
+
             {sortedProperties.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
                     <p className="text-gray-500">Nenhum imóvel aguardando análise no momento.</p>
@@ -145,6 +202,17 @@ export const Marketplace: React.FC = () => {
                                                     </span>
                                                 )}
                                             </div>
+
+                                            {currentUser?.role === 'Gestor' && (
+                                                <div className="absolute top-4 left-4 z-10">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.includes(prop.id)}
+                                                        onChange={() => handleToggleSelect(prop.id)}
+                                                        className="w-5 h-5 text-blue-600 rounded-md focus:ring-blue-500 cursor-pointer border-gray-300 bg-white"
+                                                    />
+                                                </div>
+                                            )}
 
                                             {currentUser?.role === 'Gestor' && (
                                                 <button
@@ -198,6 +266,16 @@ export const Marketplace: React.FC = () => {
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-gray-50">
                                         <tr>
+                                            {currentUser?.role === 'Gestor' && (
+                                                <th className="px-6 py-3 text-left w-10">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.length === sortedProperties.length && sortedProperties.length > 0}
+                                                        onChange={handleSelectAll}
+                                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                                    />
+                                                </th>
+                                            )}
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modalidade</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imóvel / Link</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Leilão</th>
@@ -209,7 +287,17 @@ export const Marketplace: React.FC = () => {
                                         {sortedProperties.map(prop => {
                                             const urgent = isUrgent(prop.auctionDate);
                                             return (
-                                                <tr key={prop.id} className="hover:bg-gray-50">
+                                                <tr key={prop.id} className={`hover:bg-gray-50 ${selectedIds.includes(prop.id) ? 'bg-blue-50' : ''}`}>
+                                                    {currentUser?.role === 'Gestor' && (
+                                                        <td className="px-6 py-4">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedIds.includes(prop.id)}
+                                                                onChange={() => handleToggleSelect(prop.id)}
+                                                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                                            />
+                                                        </td>
+                                                    )}
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                                             {prop.modality}

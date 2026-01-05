@@ -392,6 +392,29 @@ export const propertyService = {
             return { success: false, error: 'Erro ao remover propriedade' };
         }
     },
+    /**
+     * Delete multiple properties
+     */
+    async deleteBulk(propertyIds: string[]): Promise<{ success: boolean; error: string | null }> {
+        try {
+            // Delete related analyses
+            await supabase.from('property_analysis').delete().in('property_id', propertyIds);
+
+            const { error } = await supabase
+                .from('properties')
+                .delete()
+                .in('id', propertyIds);
+
+            if (error) {
+                return { success: false, error: error.message };
+            }
+
+            return { success: true, error: null };
+        } catch (error) {
+            console.error('Delete bulk properties error:', error);
+            return { success: false, error: 'Erro ao remover propriedades em massa' };
+        }
+    },
 };
 
 // Helper functions to map between DB and App types
