@@ -397,16 +397,21 @@ export const propertyService = {
      */
     async deleteBulk(propertyIds: string[]): Promise<{ success: boolean; error: string | null }> {
         try {
-            // Delete related analyses
-            await supabase.from('property_analysis').delete().in('property_id', propertyIds);
+            const CHUNK_SIZE = 100;
+            for (let i = 0; i < propertyIds.length; i += CHUNK_SIZE) {
+                const chunk = propertyIds.slice(i, i + CHUNK_SIZE);
 
-            const { error } = await supabase
-                .from('properties')
-                .delete()
-                .in('id', propertyIds);
+                // Delete related analyses
+                await supabase.from('property_analysis').delete().in('property_id', chunk);
 
-            if (error) {
-                return { success: false, error: error.message };
+                const { error } = await supabase
+                    .from('properties')
+                    .delete()
+                    .in('id', chunk);
+
+                if (error) {
+                    return { success: false, error: error.message };
+                }
             }
 
             return { success: true, error: null };
