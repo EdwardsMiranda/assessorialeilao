@@ -205,7 +205,7 @@ const CurrencyInput = ({
                 value={displayValue}
                 onChange={handleChange}
                 disabled={disabled}
-                className={`block w - full rounded - md border - gray - 300 pl - 8 focus: border - blue - 500 focus: ring - blue - 500 text - xs ${className} `}
+                className={`block w-full rounded-md border-gray-300 pl-8 focus:border-blue-500 focus:ring-blue-500 text-xs ${className}`}
                 placeholder={placeholder}
             />
         </div>
