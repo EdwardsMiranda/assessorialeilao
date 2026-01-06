@@ -148,7 +148,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </h2>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">v1.0.2</span>
+            <span className="text-xs text-gray-400">v1.0.3</span>
           </div>
         </header>
 

@@ -1,6 +1,14 @@
 import { supabase } from '../lib/supabase';
 import type { Property, AnalysisStatus, AuctionModality, PropertyAnalysisData } from '../types';
 
+// Helper to ensure dates are valid for Postgres or NULL
+const cleanDate = (d: string | undefined | null): string | null => {
+    if (!d) return null;
+    const trimmed = String(d).trim();
+    if (!trimmed || trimmed === '' || trimmed.toLowerCase() === 'null') return null;
+    return trimmed;
+};
+
 export const propertyService = {
     /**
      * Get all properties
@@ -20,7 +28,7 @@ export const propertyService = {
             }
 
             // Map database properties to app Property type
-            const properties: Property[] = data.map(p => {
+            const properties: Property[] = data.map((p: any) => {
                 const analysisRaw = Array.isArray(p.property_analysis) ? p.property_analysis[0] : p.property_analysis;
                 return {
                     id: p.id,
@@ -118,7 +126,7 @@ export const propertyService = {
                 .insert({
                     url: url.trim(),
                     modality,
-                    auction_date: auctionDate,
+                    auction_date: cleanDate(auctionDate),
                     title: title || 'Imóvel sem título',
                     status: 'Não Iniciado',
                     assigned_to: null,
@@ -159,14 +167,20 @@ export const propertyService = {
      * Add multiple properties
      */
     async addBulk(
-        items: Array<{ url: string; modality: AuctionModality; auctionDate: string; title: string }>,
+        items: Array<{
+            url: string;
+            modality: AuctionModality;
+            auctionDate: string;
+            title: string;
+            initialAnalysisData?: Partial<PropertyAnalysisData>
+        }>,
         addedBy: string
     ): Promise<{ success: boolean; error: string | null }> {
         try {
-            const properties = items.map(item => ({
+            const propertiesToInsert = items.map(item => ({
                 url: item.url.trim(),
                 modality: item.modality,
-                auction_date: item.auctionDate,
+                auction_date: cleanDate(item.auctionDate),
                 title: item.title || 'Imóvel Importado',
                 status: 'Não Iniciado' as const,
                 assigned_to: null,
@@ -175,12 +189,40 @@ export const propertyService = {
                 added_at: new Date().toISOString(),
             }));
 
-            const { error } = await supabase
+            const { data: insertedRows, error } = await supabase
                 .from('properties')
-                .insert(properties);
+                .insert(propertiesToInsert)
+                .select('id, url');
 
             if (error) {
                 return { success: false, error: error.message };
+            }
+
+            // If we have initial analysis data, save it for each property
+            if (insertedRows && insertedRows.length > 0) {
+                const analysisRows: any[] = [];
+
+                items.forEach(item => {
+                    if (item.initialAnalysisData) {
+                        const insertedProp = insertedRows.find((p: any) => p.url === item.url.trim());
+                        if (insertedProp) {
+                            analysisRows.push({
+                                property_id: insertedProp.id,
+                                ...mapAnalysisDataToDb({ ...item.initialAnalysisData } as PropertyAnalysisData)
+                            });
+                        }
+                    }
+                });
+
+                if (analysisRows.length > 0) {
+                    const { error: analysisError } = await supabase
+                        .from('property_analysis')
+                        .insert(analysisRows);
+
+                    if (analysisError) {
+                        console.error('Error saving bulk initial analysis:', analysisError);
+                    }
+                }
             }
 
             return { success: true, error: null };
@@ -489,7 +531,7 @@ function mapAnalysisDataToDb(data: PropertyAnalysisData): any {
         address: data.address,
         payment_method: data.paymentMethod,
         modality: data.modality,
-        event_date: data.eventDate || null,
+        event_date: cleanDate(data.eventDate),
         initial_bid: data.initialBid,
         bank_valuation: data.bankValuation,
         financing: data.financing,
@@ -498,7 +540,7 @@ function mapAnalysisDataToDb(data: PropertyAnalysisData): any {
         private_area: data.privateArea,
         condo_debt_rule: data.condoDebtRule,
         edital_link: data.editalLink,
-        homologation_date: data.homologationDate || null,
+        homologation_date: cleanDate(data.homologationDate),
         auction_lot_link: data.auctionLotLink,
         critical_impediment: data.criticalImpediment,
         bank_consolidation: data.bankConsolidation,
@@ -532,7 +574,7 @@ function mapAnalysisDataToDb(data: PropertyAnalysisData): any {
         financing_term: data.financingTerm,
         sales_period: data.salesPeriod,
         max_bid: data.maxBid,
-        last_owner_registry_date: data.lastOwnerRegistryDate || null,
+        last_owner_registry_date: cleanDate(data.lastOwnerRegistryDate),
         monthly_iptu: data.monthlyIptu,
         final_roi: data.finalRoi,
         final_net_profit: data.finalNetProfit,

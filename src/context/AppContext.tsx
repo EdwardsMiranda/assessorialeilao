@@ -28,7 +28,13 @@ interface AppContextType {
   // Properties & Files
   findPropertyByUrl: (url: string) => Property | undefined;
   addProperty: (url: string, modality: AuctionModality, auctionDate: string, title?: string, initialAnalysisData?: Partial<PropertyAnalysisData>) => Promise<void>;
-  addProperties: (items: Array<{ url: string, modality: AuctionModality, auctionDate: string, title: string }>) => Promise<void>;
+  addProperties: (items: Array<{
+    url: string,
+    modality: AuctionModality,
+    auctionDate: string,
+    title: string,
+    initialAnalysisData?: Partial<PropertyAnalysisData>
+  }>) => Promise<void>;
   claimProperty: (propertyId: string) => Promise<boolean>;
   updateStatus: (
     propertyId: string,
@@ -274,7 +280,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const addProperties = async (items: Array<{ url: string, modality: AuctionModality, auctionDate: string, title: string }>): Promise<void> => {
+  const addProperties = async (items: Array<{
+    url: string,
+    modality: AuctionModality,
+    auctionDate: string,
+    title: string,
+    initialAnalysisData?: Partial<PropertyAnalysisData>
+  }>): Promise<void> => {
     if (!currentUser) return;
 
     const { success, error } = await propertyService.addBulk(items, currentUser.id);

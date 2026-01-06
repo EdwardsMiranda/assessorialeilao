@@ -185,7 +185,8 @@ export const Inbox: React.FC = () => {
         setMapping(newMapping);
     };
 
-    const handleConfirmMapping = () => {
+    const handleConfirmMapping = async () => {
+        setIsMappingModalOpen(false);
         if (mapping.url === -1) {
             alert("Você precisa mapear a coluna do Link do Imóvel!");
             return;
@@ -259,7 +260,7 @@ export const Inbox: React.FC = () => {
         }
 
         if (newItems.length > 0) {
-            addProperties(newItems);
+            await addProperties(newItems);
             setSuccessMsg(`${newItems.length} imóveis importados com sucesso!`);
             setTimeout(() => setSuccessMsg(''), 5000);
         }
@@ -869,9 +870,9 @@ const MappingModal: React.FC<{
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {rawRows.slice(1, 4).map((row, ridx) => (
+                                    {(rawRows as any[][]).slice(1, 4).map((row: any[], ridx: number) => (
                                         <tr key={ridx}>
-                                            {headers.map((_, cidx) => (
+                                            {(headers as any[]).map((_: any, cidx: number) => (
                                                 <td key={cidx} className="px-3 py-2 whitespace-nowrap text-gray-500">
                                                     {row[cidx]?.toString().substring(0, 30)}
                                                 </td>
@@ -891,12 +892,12 @@ const MappingModal: React.FC<{
                                     {field.label} {field.required && <span className="text-red-500">*</span>}
                                 </label>
                                 <select
-                                    value={mapping[field.key]}
+                                    value={mapping[field.key as keyof typeof mapping]}
                                     onChange={(e) => setMapping(prev => ({ ...prev, [field.key]: Number(e.target.value) }))}
                                     className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value={-1}>Ignorar / Não existe</option>
-                                    {headers.map((h, i) => (
+                                    {(headers as any[]).map((h: any, i: number) => (
                                         <option key={i} value={i}>
                                             {h ? `Coluna: ${h}` : `Coluna ${i + 1}`}
                                         </option>
