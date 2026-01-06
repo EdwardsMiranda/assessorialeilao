@@ -32,7 +32,7 @@ CREATE TABLE properties (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     url TEXT NOT NULL,
     modality VARCHAR(100) NOT NULL,
-    auction_date DATE NOT NULL,
+    auction_date DATE,
     status VARCHAR(50) NOT NULL CHECK (status IN ('Não Iniciado', 'Em Análise', 'Analisado', 'Abortado', 'Arrematado')),
     assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
     added_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
