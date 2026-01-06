@@ -212,19 +212,29 @@ export const Inbox: React.FC = () => {
             const cDate = mapping.auctionDate !== -1 ? row[mapping.auctionDate]?.toString().trim() : '';
 
             const modalityEnum = parseModality(cModality);
-            let finalDate = cDate;
+            let finalDate = '';
 
             // Date processing logic
-            if (modalityEnum !== AuctionModality.VENDA_DIRETA || cDate) {
+            if (cDate) {
                 if (!isNaN(Number(cDate)) && Number(cDate) > 40000) {
+                    // Excel serial date
                     const dateObj = new Date(Math.round((Number(cDate) - 25569) * 86400 * 1000));
                     finalDate = dateObj.toISOString().split('T')[0];
-                } else if (cDate && cDate.includes('/')) {
+                } else if (cDate.includes('/')) {
+                    // DD/MM/YYYY format
                     const parts = cDate.split('/');
-                    if (parts.length === 3) finalDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    if (parts.length === 3) {
+                        const year = parts[2].trim();
+                        const month = parts[1].trim().padStart(2, '0');
+                        const day = parts[0].trim().padStart(2, '0');
+                        if (year.length === 4) {
+                            finalDate = `${year}-${month}-${day}`;
+                        }
+                    }
+                } else if (/^\d{4}-\d{2}-\d{2}$/.test(cDate)) {
+                    // Already ISO format
+                    finalDate = cDate;
                 }
-            } else {
-                finalDate = '';
             }
 
             // Optional analysis data
