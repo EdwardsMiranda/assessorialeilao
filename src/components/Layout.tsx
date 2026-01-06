@@ -83,13 +83,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 navigate(item.path);
                 setIsMobileMenuOpen(false);
               }}
-              className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeId === item.id
+              className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors text-left ${activeId === item.id
                 ? 'bg-blue-50 text-blue-700'
                 : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
             >
-              <item.icon className={`w-5 h-5 mr-3 ${activeId === item.id ? 'text-blue-600' : 'text-gray-400'}`} />
-              {item.label}
+              <item.icon className={`w-5 h-5 flex-shrink-0 ${activeId === item.id ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span className="ml-3 whitespace-nowrap">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -148,7 +148,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </h2>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">v1.0.5</span>
+            <span className="text-xs text-gray-400">v1.0.6</span>
           </div>
         </header>
 
