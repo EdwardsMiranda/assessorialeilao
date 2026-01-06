@@ -44,6 +44,7 @@ interface AppContextType {
   deleteProperty: (propertyId: string) => Promise<void>;
   deletePropertiesBulk: (propertyIds: string[]) => Promise<void>;
   getStats: () => { total: number; pending: number; inProgress: number; completed: number; aborted: number; sold: number };
+  isManager: boolean;
 
   // File Management
   uploadDocument: (propertyId: string, file: File, docType: string) => Promise<string>;
@@ -67,6 +68,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isLoading, setIsLoading] = useState(true);
 
   const isAuthenticated = !!currentUser;
+  const isManager = currentUser?.role === UserRole.ADMIN;
 
   // Initialize: Check session and load data
   useEffect(() => {
@@ -400,7 +402,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       login, createUser, logout, updateUserRole, toggleUserBlock, updateProfile, changePassword,
       addClient, removeClient, updateClient,
       findPropertyByUrl, addProperty, addProperties, claimProperty, updateStatus, updateManagerDispatch, markAsSold, deleteProperty, deletePropertiesBulk, getStats,
-      uploadDocument
+      uploadDocument,
+      isManager
     }}>
       {children}
     </AppContext.Provider>

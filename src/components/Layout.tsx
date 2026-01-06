@@ -31,29 +31,24 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   if (!currentUser) return null;
 
-  // Define nav items based on role
-  let navItems = [];
+  // Define nav items
+  const commonNavItems = [
+    { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: Home },
+    { id: 'inbox', path: '/inbox', label: 'Novos Imóveis', icon: PlusCircle },
+    { id: 'marketplace', path: '/marketplace', label: 'Mural de Oportunidades', icon: Briefcase },
+    { id: 'my-work', path: '/my-work', label: 'Minhas Análises', icon: CheckSquare },
+  ];
 
-  if (currentUser.role === UserRole.ANALYST) {
-    navItems = [
-      { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: Home },
-      { id: 'inbox', path: '/inbox', label: 'Novos Imóveis', icon: PlusCircle },
-      { id: 'marketplace', path: '/marketplace', label: 'Mural de Oportunidades', icon: Briefcase },
-      { id: 'my-work', path: '/my-work', label: 'Minhas Análises', icon: CheckSquare },
-    ];
-  } else {
-    // ADMIN sees everything
-    navItems = [
-      { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: Home },
-      { id: 'inbox', path: '/inbox', label: 'Novos Imóveis', icon: PlusCircle },
-      { id: 'marketplace', path: '/marketplace', label: 'Mural de Oportunidades', icon: Briefcase },
-      { id: 'my-work', path: '/my-work', label: 'Minhas Análises', icon: CheckSquare },
-      { id: 'admin-opportunities', path: '/admin-opportunities', label: 'Oportunidades Validadas', icon: Award },
-      { id: 'sold-properties', path: '/sold-properties', label: 'Imóveis Arrematados', icon: Trophy },
-      { id: 'clients', path: '/clients', label: 'Investidores', icon: Contact },
-      { id: 'user-management', path: '/user-management', label: 'Gestão de Usuários', icon: Users },
-    ];
-  }
+  const adminNavItems = [
+    { id: 'admin-opportunities', path: '/admin-opportunities', label: 'Oportunidades Validadas', icon: Award },
+    { id: 'sold-properties', path: '/sold-properties', label: 'Imóveis Arrematados', icon: Trophy },
+    { id: 'clients', path: '/clients', label: 'Investidores', icon: Contact },
+    { id: 'user-management', path: '/user-management', label: 'Gestão de Usuários', icon: Users },
+  ];
+
+  const navItems = currentUser.role === UserRole.ADMIN
+    ? [...commonNavItems, ...adminNavItems]
+    : commonNavItems;
 
   const activeItem = navItems.find(item => location.pathname.startsWith(item.path));
   const activeId = activeItem ? activeItem.id : '';
@@ -89,8 +84,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 setIsMobileMenuOpen(false);
               }}
               className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeId === item.id
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                ? 'bg-blue-50 text-blue-700'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
             >
               <item.icon className={`w-5 h-5 mr-3 ${activeId === item.id ? 'text-blue-600' : 'text-gray-400'}`} />

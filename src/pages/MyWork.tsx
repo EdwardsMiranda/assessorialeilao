@@ -13,8 +13,7 @@ export const MyWork: React.FC = () => {
 
   // Bulk Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const { properties, currentUser, deletePropertiesBulk, userRole } = useApp();
-  const isManager = userRole === 'MANAGER';
+  const { properties, currentUser, deletePropertiesBulk, isManager } = useApp();
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
 
   // Filter for properties assigned to current user OR properties that are already completed (history)

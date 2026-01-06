@@ -6,10 +6,9 @@ import { Eye, DollarSign, AlertTriangle, Send, CheckSquare, MapPin, CreditCard, 
 import { AnalysisModal } from '../components/AnalysisModal';
 
 export const AdminOpportunities: React.FC = () => {
-    const { properties, clients, updateManagerDispatch, markAsSold, deletePropertiesBulk, userRole } = useApp();
+    const { properties, clients, updateManagerDispatch, markAsSold, deletePropertiesBulk, isManager } = useApp();
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const isManager = userRole === 'MANAGER';
 
     // Arrematação Modal State
     const [isArrematarModalOpen, setIsArrematarModalOpen] = useState(false);

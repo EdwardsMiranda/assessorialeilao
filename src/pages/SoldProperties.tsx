@@ -6,9 +6,8 @@ import { formatDate } from '../utils/formatters';
 import { Trophy, Calendar, DollarSign, User, TrendingUp, MapPin, Briefcase, Search, ArrowUpDown, CalendarCheck, AlertOctagon } from 'lucide-react';
 
 export const SoldProperties: React.FC = () => {
-    const { properties, users, deletePropertiesBulk, userRole } = useApp();
+    const { properties, users, deletePropertiesBulk, isManager } = useApp();
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const isManager = userRole === 'MANAGER';
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<'auctionDate' | 'homologationDate' | 'buyer' | 'analyst'>('auctionDate');
     const [monthFilter, setMonthFilter] = useState('');
