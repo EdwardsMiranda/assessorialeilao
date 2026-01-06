@@ -13,11 +13,22 @@ export const MyWork: React.FC = () => {
 
   // Bulk Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const { properties, currentUser, deletePropertiesBulk, isManager } = useApp();
+  const { properties, currentUser, deletePropertiesBulk, isManager, users } = useApp();
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
 
-  // Filter for properties assigned to current user OR properties that are already completed (history)
-  const myProperties = currentUser ? properties.filter((p: Property) => p.assignedTo === currentUser.id) : [];
+  // GESTOR vê todas as análises, ANALISTA vê apenas as suas
+  const myProperties = currentUser
+    ? isManager
+      ? properties  // Gestor vê TODAS as propriedades
+      : properties.filter((p: Property) => p.assignedTo === currentUser.id)  // Analista vê só as suas
+    : [];
+
+  // Helper para obter nome do analista
+  const getAnalystName = (assignedTo: string | undefined) => {
+    if (!assignedTo) return 'Não atribuído';
+    const user = users.find(u => u.id === assignedTo);
+    return user?.name || 'Desconhecido';
+  };
 
   // Apply Filters and Sort
   const filteredAndSortedProperties = myProperties
@@ -101,8 +112,8 @@ export const MyWork: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Minhas Análises</h2>
-          <p className="text-gray-500">Gerencie sua fila de trabalho.</p>
+          <h2 className="text-2xl font-bold text-gray-800">{isManager ? 'Análises da Equipe' : 'Minhas Análises'}</h2>
+          <p className="text-gray-500">{isManager ? 'Acompanhe todas as análises da equipe.' : 'Gerencie sua fila de trabalho.'}</p>
         </div>
 
         {/* Month Filter */}
@@ -189,6 +200,9 @@ export const MyWork: React.FC = () => {
                   </th>
                 )}
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imóvel</th>
+                {isManager && (
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Analista</th>
+                )}
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Leilão</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modalidade</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -198,7 +212,7 @@ export const MyWork: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredAndSortedProperties.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan={isManager ? 7 : 6} className="px-6 py-10 text-center text-gray-500">
                     Nenhum imóvel encontrado com os filtros atuais.
                   </td>
                 </tr>
@@ -235,6 +249,13 @@ export const MyWork: React.FC = () => {
                         </div>
                       </div>
                     </td>
+                    {isManager && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-900 font-medium">
+                          {getAnalystName(prop.assignedTo || undefined)}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">
                       {formatDate(prop.auctionDate)}
                     </td>
