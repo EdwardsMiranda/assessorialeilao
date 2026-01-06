@@ -17,7 +17,7 @@ export const MyWork: React.FC = () => {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
 
   // Filter for properties assigned to current user OR properties that are already completed (history)
-  const myProperties = currentUser ? properties.filter(p => p.assignedTo === currentUser.id) : [];
+  const myProperties = currentUser ? properties.filter((p: Property) => p.assignedTo === currentUser.id) : [];
 
   // Apply Filters and Sort
   const filteredAndSortedProperties = myProperties
@@ -66,13 +66,13 @@ export const MyWork: React.FC = () => {
     if (selectedIds.length === filteredAndSortedProperties.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredAndSortedProperties.map(p => p.id));
+      setSelectedIds(filteredAndSortedProperties.map((p: Property) => p.id));
     }
   };
 
   const toggleSelectOne = (id: string) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    setSelectedIds((prev: string[]) =>
+      prev.includes(id) ? prev.filter((i: string) => i !== id) : [...prev, id]
     );
   };
 
@@ -113,7 +113,7 @@ export const MyWork: React.FC = () => {
           <input
             type="month"
             value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMonthFilter(e.target.value)}
             className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
           />
         </div>
@@ -151,7 +151,7 @@ export const MyWork: React.FC = () => {
           <div className="relative">
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value as any)}
               className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white text-gray-900"
             >
               <option value="date">Ordenar: Data Leilão</option>
@@ -203,8 +203,8 @@ export const MyWork: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredAndSortedProperties.map((prop) => (
-                  <tr key={prop.id} className={`hover: bg - gray - 50 transition - colors ${selectedIds.includes(prop.id) ? 'bg-blue-50' : ''} `}>
+                filteredAndSortedProperties.map((prop: Property) => (
+                  <tr key={prop.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(prop.id) ? 'bg-blue-50' : ''}`}>
                     {isManager && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <input
@@ -242,7 +242,7 @@ export const MyWork: React.FC = () => {
                       {prop.modality}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px - 2 inline - flex text - xs leading - 5 font - semibold rounded - full items - center gap - 1 ${getStatusColor(prop.status)} `}>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full items-center gap-1 ${getStatusColor(prop.status)}`}>
                         {getStatusIcon(prop.status)}
                         {prop.status}
                       </span>
