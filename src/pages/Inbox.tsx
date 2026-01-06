@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { AuctionModality } from '../types';
+import { AuctionModality, PropertyAnalysisData } from '../types';
 import { Plus, Link as LinkIcon, Building, Calendar, FileSpreadsheet, Upload, Download, AlertTriangle, CheckCircle, Copy, Brain, Loader2 } from 'lucide-react';
 import { formatDate } from '../utils/formatters';
 import * as XLSX from 'xlsx';
@@ -40,6 +40,20 @@ export const Inbox: React.FC = () => {
     const [isProcessingSmart, setIsProcessingSmart] = useState(false);
     const [smartLogs, setSmartLogs] = useState<string[]>([]);
     const [smartProgress, setSmartProgress] = useState(0);
+
+    // Mapping State
+    const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
+    const [rawRows, setRawRows] = useState<any[][]>([]);
+    const [mapping, setMapping] = useState<Record<string, number>>({
+        url: -1,
+        modality: -1,
+        auctionDate: -1,
+        initialBid: -1,
+        cityState: -1,
+        condoName: -1,
+        privateArea: -1,
+        bankValuation: -1
+    });
 
     const checkManualDuplication = () => {
         const existing = findPropertyByUrl(url);
@@ -136,73 +150,101 @@ export const Inbox: React.FC = () => {
                 const text = await file.text();
                 rows = text.split('\n').map(r => r.split(','));
             }
+
+            if (rows.length > 0) {
+                setRawRows(rows);
+                autoDetectMapping(rows[0]);
+                setIsMappingModalOpen(true);
+            }
         } catch (err) {
             alert("Erro ao ler arquivo. Verifique se o formato está correto.");
             return;
         }
+    };
 
-        const newItems: Array<{ url: string, modality: AuctionModality, auctionDate: string, title: string }> = [];
+    const autoDetectMapping = (headers: any[]) => {
+        if (!headers) return;
+        const newMapping: Record<string, number> = {
+            url: -1, modality: -1, auctionDate: -1, initialBid: -1,
+            cityState: -1, condoName: -1, privateArea: -1, bankValuation: -1
+        };
+
+        headers.forEach((h, idx) => {
+            if (!h) return;
+            const s = h.toString().toLowerCase();
+            if (s.includes('link') || s.includes('url') || s.includes('site')) newMapping.url = idx;
+            if (s.includes('modality') || s.includes('modalidade')) newMapping.modality = idx;
+            if (s.includes('data') || s.includes('date') || s.includes('evento')) newMapping.auctionDate = idx;
+            if (s.includes('lance') || s.includes('inicial') || s.includes('bid')) newMapping.initialBid = idx;
+            if (s.includes('cidade') || s.includes('city') || s.includes('estado') || s.includes('uf')) newMapping.cityState = idx;
+            if (s.includes('condom') || s.includes('edificio') || s.includes('prédio')) newMapping.condoName = idx;
+            if (s.includes('area') || s.includes('m2') || s.includes('privativa')) newMapping.privateArea = idx;
+            if (s.includes('avalia') || s.includes('banco') || s.includes('valuation')) newMapping.bankValuation = idx;
+        });
+
+        setMapping(newMapping);
+    };
+
+    const handleConfirmMapping = () => {
+        if (mapping.url === -1) {
+            alert("Você precisa mapear a coluna do Link do Imóvel!");
+            return;
+        }
+
+        const newItems: Array<{ url: string, modality: AuctionModality, auctionDate: string, title: string, initialAnalysisData?: Partial<PropertyAnalysisData> }> = [];
         let errors = 0;
         let duplicates = 0;
 
-        // Skip header (index 0)
-        for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
+        // Skip header
+        for (let i = 1; i < rawRows.length; i++) {
+            const row = rawRows[i];
             if (!row || row.length === 0) continue;
 
-            // Expectativa: [0] Link, [1] Modalidade, [2] Data
-            const cUrl = row[0]?.toString().trim();
-            const cModality = row[1]?.toString().trim();
-            const cDate = row[2]?.toString().trim();
+            const cUrl = mapping.url !== -1 ? row[mapping.url]?.toString().trim() : '';
+            if (!cUrl) continue;
 
-            if (!cUrl) {
-                // Linha vazia ou inválida
+            if (findPropertyByUrl(cUrl)) {
+                duplicates++;
                 continue;
             }
 
-            // 1. Check Duplicates
-            if (findPropertyByUrl(cUrl)) {
-                duplicates++;
-                continue; // Pular duplicados na importação em massa para manter limpo
-            }
+            const cModality = mapping.modality !== -1 ? row[mapping.modality]?.toString().trim() : '';
+            const cDate = mapping.auctionDate !== -1 ? row[mapping.auctionDate]?.toString().trim() : '';
 
-            // 2. Validate Date (optional for Venda Direta)
             const modalityEnum = parseModality(cModality);
             let finalDate = cDate;
-            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
-            // For Venda Direta, empty date is allowed
-            if (modalityEnum === AuctionModality.VENDA_DIRETA && !cDate) {
-                finalDate = ''; // Allow empty date for Venda Direta
-            } else {
-                // Attempt to fix Excel date serial number or DD/MM/YYYY
+            // Date processing logic
+            if (modalityEnum !== AuctionModality.VENDA_DIRETA || cDate) {
                 if (!isNaN(Number(cDate)) && Number(cDate) > 40000) {
-                    // Excel serial date
                     const dateObj = new Date(Math.round((Number(cDate) - 25569) * 86400 * 1000));
                     finalDate = dateObj.toISOString().split('T')[0];
                 } else if (cDate && cDate.includes('/')) {
                     const parts = cDate.split('/');
-                    if (parts.length === 3) {
-                        // Assume DD/MM/YYYY -> YYYY-MM-DD
-                        finalDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                    }
+                    if (parts.length === 3) finalDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
                 }
-
-                if (!finalDate || (finalDate.length !== 10 && !dateRegex.test(finalDate))) {
-                    // Data inválida
-                    errors++;
-                    continue;
-                }
+            } else {
+                finalDate = '';
             }
 
-            // Gerar Título Automático já que foi removido da planilha
-            const generatedTitle = `Oportunidade ${modalityEnum} - ${finalDate || 'Sem Data'}`;
+            // Optional analysis data
+            const analysisData: Partial<PropertyAnalysisData> = {};
+            if (mapping.cityState !== -1) analysisData.cityState = row[mapping.cityState]?.toString().trim();
+            if (mapping.initialBid !== -1) analysisData.initialBid = Number(row[mapping.initialBid]) || 0;
+            if (mapping.condoName !== -1) analysisData.condoName = row[mapping.condoName]?.toString().trim();
+            if (mapping.privateArea !== -1) analysisData.privateArea = Number(row[mapping.privateArea]) || 0;
+            if (mapping.bankValuation !== -1) analysisData.bankValuation = Number(row[mapping.bankValuation]) || 0;
+
+            const generatedTitle = analysisData.condoName
+                ? `${analysisData.condoName} - ${analysisData.cityState || ''}`
+                : `Oportunidade ${modalityEnum} - ${finalDate || 'Sem Data'}`;
 
             newItems.push({
-                title: generatedTitle,
                 url: cUrl,
                 modality: modalityEnum,
-                auctionDate: finalDate
+                auctionDate: finalDate,
+                title: generatedTitle,
+                initialAnalysisData: analysisData
             });
         }
 
@@ -213,6 +255,7 @@ export const Inbox: React.FC = () => {
         }
 
         setImportStats({ total: newItems.length, errors, duplicates });
+        setIsMappingModalOpen(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -250,14 +293,19 @@ export const Inbox: React.FC = () => {
             const worksheet = workbook.Sheets[sheetName];
             const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-            // Extract URLs from first column
+            // Extract URLs from ALL cells that look like a URL
             const urls: string[] = [];
-            for (let i = 1; i < rows.length; i++) { // Skip header
-                const row = rows[i];
-                if (!row || row.length === 0) continue;
-                const url = row[0]?.toString().trim();
-                if (url) urls.push(url);
-            }
+            const urlRegex = /https?:\/\/[^\s]+/g;
+
+            rows.forEach((row, rowIndex) => {
+                if (rowIndex === 0) return; // Skip potential header
+                row.forEach(cell => {
+                    const content = cell?.toString().trim();
+                    if (content && (content.startsWith('http') || urlRegex.test(content))) {
+                        urls.push(content);
+                    }
+                });
+            });
 
             setSmartLogs(prev => [`📊 ${urls.length} URLs encontradas na planilha`, ...prev]);
             await processSmartUrls(urls);
@@ -280,18 +328,18 @@ export const Inbox: React.FC = () => {
             try {
                 // 1. Check duplicate
                 if (findPropertyByUrl(currentUrl)) {
-                    setSmartLogs((prev: any) => [`⚠️ [Duplicado] ${currentUrl}`, ...prev]);
+                    setSmartLogs((prev: string[]) => [`⚠️ [Duplicado] ${currentUrl}`, ...prev]);
                     continue;
                 }
 
-                setSmartLogs((prev: any) => [`🔍 Analisando: ${currentUrl}...`, ...prev]);
+                setSmartLogs((prev: string[]) => [`🔍 Analisando: ${currentUrl}...`, ...prev]);
 
                 // 2. Extract Data via AI
                 const extractedData = await extractDataFromUrl(currentUrl);
 
                 // Check if extraction failed
                 if (!extractedData) {
-                    setSmartLogs((prev: any) => [`❌ Erro ao extrair dados de: ${currentUrl}`, ...prev]);
+                    setSmartLogs((prev: string[]) => [`❌ Erro ao extrair dados de: ${currentUrl}`, ...prev]);
                     continue;
                 }
 
@@ -319,19 +367,19 @@ export const Inbox: React.FC = () => {
                     // The 'addProperty' simple signature doesn't support generic metadata update easily 
                     // without a secondary call, but let's keep it simple for now.
 
-                    setSmartLogs((prev: any) => [`✅ MATCH! Cliente(s): ${clientIds.join(', ')} - ${reason}`, ...prev]);
+                    setSmartLogs((prev: string[]) => [`✅ MATCH! Cliente(s): ${clientIds.join(', ')} - ${reason}`, ...prev]);
                     addedCount++;
                 } else {
-                    setSmartLogs((prev: any) => [`❌ [Sem Match] Descartado. (${reason})`, ...prev]);
+                    setSmartLogs((prev: string[]) => [`❌ [Sem Match] Descartado. (${reason})`, ...prev]);
                 }
 
             } catch (err) {
                 console.error(err);
-                setSmartLogs((prev: any) => [`❌ [Erro] Falha ao processar ${currentUrl}`, ...prev]);
+                setSmartLogs((prev: string[]) => [`❌ [Erro] Falha ao processar ${currentUrl}`, ...prev]);
             }
         }
 
-        setSmartLogs((prev: any) => [`🏁 Concluído! ${addedCount} imóveis importados de ${urls.length} analisados.`, ...prev]);
+        setSmartLogs((prev: string[]) => [`🏁 Concluído! ${addedCount} imóveis importados de ${urls.length} analisados.`, ...prev]);
         setIsProcessingSmart(false);
     };
 
@@ -741,6 +789,129 @@ export const Inbox: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* Column Mapping Modal */}
+            <MappingModal
+                isOpen={isMappingModalOpen}
+                onClose={() => setIsMappingModalOpen(false)}
+                onConfirm={handleConfirmMapping}
+                headers={rawRows[0] || []}
+                rawRows={rawRows}
+                mapping={mapping}
+                setMapping={setMapping}
+            />
         </div >
+    );
+};
+
+// --- Mapping Modal Component ---
+const MappingModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    headers: any[];
+    rawRows: any[][];
+    mapping: Record<string, number>;
+    setMapping: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+}> = ({ isOpen, onClose, onConfirm, headers, rawRows, mapping, setMapping }) => {
+    if (!isOpen) return null;
+
+    const fields = [
+        { key: 'url', label: 'Link do Imóvel (Obrigatório)', required: true },
+        { key: 'modality', label: 'Modalidade' },
+        { key: 'auctionDate', label: 'Data do Leilão' },
+        { key: 'initialBid', label: 'Lance Inicial' },
+        { key: 'cityState', label: 'Cidade / UF' },
+        { key: 'condoName', label: 'Condomínio' },
+        { key: 'privateArea', label: 'Área Privativa (m²)' },
+        { key: 'bankValuation', label: 'Avaliação Banco' },
+    ];
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-8 flex flex-col max-h-[90vh]">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 border-l-4 border-blue-600 pl-3">
+                        Mapeamento de Colunas
+                    </h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <Plus className="w-6 h-6 rotate-45" />
+                    </button>
+                </div>
+
+                <div className="mb-6 bg-blue-50 p-4 rounded-lg text-sm text-blue-800">
+                    <p>Detectamos automaticamente algumas colunas. Verifique se o mapeamento está correto para iniciar a importação.</p>
+                </div>
+
+                <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                    {/* Data Preview */}
+                    <div>
+                        <h4 className="text-sm font-bold text-gray-700 mb-2">Pré-visualização do Arquivo</h4>
+                        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                            <table className="min-w-full divide-y divide-gray-200 text-xs">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        {headers.map((h, i: number) => (
+                                            <th key={i} className="px-3 py-2 text-left font-semibold text-gray-600 uppercase tracking-wider">
+                                                {h || `Coluna ${i + 1}`}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {rawRows.slice(1, 4).map((row, ridx) => (
+                                        <tr key={ridx}>
+                                            {headers.map((_, cidx) => (
+                                                <td key={cidx} className="px-3 py-2 whitespace-nowrap text-gray-500">
+                                                    {row[cidx]?.toString().substring(0, 30)}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Mapping Selectors */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {fields.map(field => (
+                            <div key={field.key}>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">
+                                    {field.label} {field.required && <span className="text-red-500">*</span>}
+                                </label>
+                                <select
+                                    value={mapping[field.key]}
+                                    onChange={(e) => setMapping(prev => ({ ...prev, [field.key]: Number(e.target.value) }))}
+                                    className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value={-1}>Ignorar / Não existe</option>
+                                    {headers.map((h, i) => (
+                                        <option key={i} value={i}>
+                                            {h ? `Coluna: ${h}` : `Coluna ${i + 1}`}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="mt-8 flex gap-3 pt-6 border-t border-gray-100">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className="flex-3 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-bold flex items-center justify-center gap-2 px-8 shadow-sm"
+                    >
+                        <CheckCircle className="w-5 h-5" /> Confirmar e Importar ({rawRows.length - 1} linhas)
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 };
