@@ -42,7 +42,7 @@ export const Login: React.FC = () => {
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 mb-4">
                             <Briefcase className="w-6 h-6" />
                         </div>
-                        <h2 className="text-2xl font-bold text-gray-900">LeilãoInvest</h2>
+                        <h2 className="text-2xl font-bold text-gray-900">Assessoria Edwards Miranda</h2>
                         <p className="text-sm text-gray-500 mt-2">
                             Acesso restrito a colaboradores.
                         </p>

@@ -70,8 +70,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       `}>
         <div className="flex items-center justify-center h-16 border-b border-gray-200 bg-blue-600">
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="bg-white text-blue-600 rounded p-1 text-sm font-extrabold">LI</span>
-            LeilãoInvest
+            <span className="bg-white text-blue-600 rounded p-1 text-sm font-extrabold">AEM</span>
+            Assessoria Edwards Miranda
           </h1>
         </div>
 
@@ -148,7 +148,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </h2>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">v1.0.6</span>
+            <span className="text-xs text-gray-400">v1.0.7</span>
           </div>
         </header>
 
