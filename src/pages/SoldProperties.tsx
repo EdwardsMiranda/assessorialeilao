@@ -6,7 +6,9 @@ import { formatDate } from '../utils/formatters';
 import { Trophy, Calendar, DollarSign, User, TrendingUp, MapPin, Briefcase, Search, ArrowUpDown, CalendarCheck, AlertOctagon } from 'lucide-react';
 
 export const SoldProperties: React.FC = () => {
-    const { properties, users } = useApp();
+    const { properties, users, deletePropertiesBulk, userRole } = useApp();
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const isManager = userRole === 'MANAGER';
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<'auctionDate' | 'homologationDate' | 'buyer' | 'analyst'>('auctionDate');
     const [monthFilter, setMonthFilter] = useState('');
@@ -60,6 +62,33 @@ export const SoldProperties: React.FC = () => {
     const totalInvested = filteredAndSortedProperties.reduce((acc, p) => acc + (p.soldAmount || p.analysisData?.initialBid || 0), 0);
     const totalCount = filteredAndSortedProperties.length;
 
+    const toggleSelectAll = () => {
+        if (selectedIds.length === filteredAndSortedProperties.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(filteredAndSortedProperties.map(p => p.id));
+        }
+    };
+
+    const toggleSelectOne = (id: string) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleDeleteBulk = async () => {
+        if (selectedIds.length === 0) return;
+        if (window.confirm(`Tem certeza que deseja excluir ${selectedIds.length} imóveis arrematados?`)) {
+            try {
+                await deletePropertiesBulk(selectedIds);
+                setSelectedIds([]);
+            } catch (error) {
+                console.error('Error deleting properties:', error);
+                alert('Erro ao excluir propriedades.');
+            }
+        }
+    };
+
     // Function to check if we should alert (Today >= Homologation)
     const shouldAlertPayment = (homologationDate?: string) => {
         if (!homologationDate) return false;
@@ -94,6 +123,21 @@ export const SoldProperties: React.FC = () => {
                         className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                 </div>
+
+                {isManager && (
+                    <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-300">
+                        <input
+                            type="checkbox"
+                            id="select-all"
+                            checked={selectedIds.length > 0 && selectedIds.length === filteredAndSortedProperties.length}
+                            onChange={toggleSelectAll}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                        />
+                        <label htmlFor="select-all" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                            Selecionar Todos
+                        </label>
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -128,17 +172,29 @@ export const SoldProperties: React.FC = () => {
 
             {/* Toolbar */}
             <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="relative w-full md:w-96">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-gray-400" />
+                <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center">
+                    <div className="relative w-full md:w-96">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                            type="text"
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:ring focus:ring-blue-200 sm:text-sm"
+                            placeholder="Buscar por Comprador, Analista ou Imóvel..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
-                    <input
-                        type="text"
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:ring focus:ring-blue-200 sm:text-sm"
-                        placeholder="Buscar por Comprador, Analista ou Imóvel..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+
+                    {isManager && selectedIds.length > 0 && (
+                        <button
+                            onClick={handleDeleteBulk}
+                            className="w-full md:w-auto px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-bold flex items-center justify-center gap-2 shadow-sm transition-colors"
+                        >
+                            <AlertOctagon className="w-4 h-4" />
+                            Excluir Selecionados ({selectedIds.length})
+                        </button>
+                    )}
                 </div>
 
                 <div className="relative w-full md:w-auto">
@@ -168,7 +224,17 @@ export const SoldProperties: React.FC = () => {
                         const alertPayment = shouldAlertPayment(prop.analysisData?.homologationDate);
 
                         return (
-                            <div key={prop.id} className={`bg-white rounded-xl shadow-sm border p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden transition-all ${alertPayment ? 'border-red-300 ring-2 ring-red-100' : 'border-yellow-200'}`}>
+                            <div key={prop.id} className={`bg-white rounded-xl shadow-sm border p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden transition-all ${alertPayment ? 'border-red-300 ring-2 ring-red-100' : 'border-yellow-200'} ${selectedIds.includes(prop.id) ? 'ring-2 ring-blue-400' : ''}`}>
+                                {isManager && (
+                                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 z-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.includes(prop.id)}
+                                            onChange={() => toggleSelectOne(prop.id)}
+                                            className="w-5 h-5 text-blue-600 rounded-full focus:ring-blue-500 border-gray-300 shadow-sm cursor-pointer bg-white"
+                                        />
+                                    </div>
+                                )}
                                 {/* Ribbon */}
                                 <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-bl-lg shadow-sm">
                                     ARREMATADO EM {prop.soldDate ? formatDate(prop.soldDate) : 'Data N/D'}

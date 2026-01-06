@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AnalysisStatus, Property } from '../types';
@@ -7,34 +6,36 @@ import { ExternalLink, Edit, CheckCircle2, XCircle, Search, Calendar, CheckSquar
 import { AnalysisModal } from '../components/AnalysisModal';
 
 export const MyWork: React.FC = () => {
-  const { properties, currentUser } = useApp();
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-
-  // Filters State
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchStr, setSearchStr] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'modality' | 'status'>('date');
   const [monthFilter, setMonthFilter] = useState('');
+
+  // Bulk Selection
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { properties, currentUser, deletePropertiesBulk, userRole } = useApp();
+  const isManager = userRole === 'MANAGER';
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
 
   // Filter for properties assigned to current user OR properties that are already completed (history)
   const myProperties = currentUser ? properties.filter(p => p.assignedTo === currentUser.id) : [];
 
   // Apply Filters and Sort
   const filteredAndSortedProperties = myProperties
-    .filter(p => {
-      const searchStr = searchTerm.toLowerCase();
+    .filter((p: Property) => {
+      const search = searchStr.toLowerCase();
       const matchesSearch =
-        p.title?.toLowerCase().includes(searchStr) ||
-        p.displayId?.toLowerCase().includes(searchStr) ||
+        p.title?.toLowerCase().includes(search) ||
+        p.displayId?.toLowerCase().includes(search) ||
         false;
-      const matchesStatus = statusFilter === 'all' ? true : p.status === statusFilter;
+      const matchesStatus = filterStatus === 'all' ? true : p.status === filterStatus;
 
       // Month Filter Logic (Auction Date) - skip empty dates
       const matchesMonth = monthFilter ? (p.auctionDate && p.auctionDate.startsWith(monthFilter)) : true;
 
       return matchesSearch && matchesStatus && matchesMonth;
     })
-    .sort((a, b) => {
+    .sort((a: Property, b: Property) => {
       switch (sortBy) {
         case 'date':
           // Handle empty dates - put them at the end
@@ -59,6 +60,33 @@ export const MyWork: React.FC = () => {
       case AnalysisStatus.ANALISADO: return 'bg-green-100 text-green-800';
       case AnalysisStatus.ABORTADO: return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredAndSortedProperties.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredAndSortedProperties.map(p => p.id));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteBulk = async () => {
+    if (selectedIds.length === 0) return;
+    if (window.confirm(`Tem certeza que deseja excluir ${selectedIds.length} análises ? `)) {
+      try {
+        await deletePropertiesBulk(selectedIds);
+        setSelectedIds([]);
+      } catch (error) {
+        console.error('Error deleting properties:', error);
+        alert('Erro ao excluir propriedades.');
+      }
     }
   };
 
@@ -102,16 +130,16 @@ export const MyWork: React.FC = () => {
             type="text"
             className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:ring focus:ring-blue-200 sm:text-sm"
             placeholder="Buscar por nome do imóvel..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchStr}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchStr(e.target.value)}
           />
         </div>
 
         <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
           <div className="relative">
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              value={filterStatus}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value)}
               className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white text-gray-900"
             >
               <option value="all">Status: Todos</option>
@@ -134,6 +162,16 @@ export const MyWork: React.FC = () => {
             </select>
           </div>
         </div>
+
+        {isManager && selectedIds.length > 0 && (
+          <button
+            onClick={handleDeleteBulk}
+            className="w-full md:w-auto px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-bold flex items-center justify-center gap-2 shadow-sm transition-colors"
+          >
+            <XCircle className="w-4 h-4" />
+            Excluir Selecionados ({selectedIds.length})
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -141,6 +179,16 @@ export const MyWork: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                {isManager && (
+                  <th scope="col" className="px-6 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length > 0 && selectedIds.length === filteredAndSortedProperties.length}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                    />
+                  </th>
+                )}
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imóvel</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Leilão</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modalidade</th>
@@ -157,7 +205,17 @@ export const MyWork: React.FC = () => {
                 </tr>
               ) : (
                 filteredAndSortedProperties.map((prop) => (
-                  <tr key={prop.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={prop.id} className={`hover: bg - gray - 50 transition - colors ${selectedIds.includes(prop.id) ? 'bg-blue-50' : ''} `}>
+                    {isManager && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(prop.id)}
+                          onChange={() => toggleSelectOne(prop.id)}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                        />
+                      </td>
+                    )}
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
@@ -185,7 +243,7 @@ export const MyWork: React.FC = () => {
                       {prop.modality}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full items-center gap-1 ${getStatusColor(prop.status)}`}>
+                      <span className={`px - 2 inline - flex text - xs leading - 5 font - semibold rounded - full items - center gap - 1 ${getStatusColor(prop.status)} `}>
                         {getStatusIcon(prop.status)}
                         {prop.status}
                       </span>

@@ -17,6 +17,8 @@ interface AppContextType {
   logout: () => Promise<void>;
   updateUserRole: (userId: string, role: UserRole) => Promise<void>;
   toggleUserBlock: (userId: string) => Promise<void>;
+  updateProfile: (name: string) => Promise<boolean>;
+  changePassword: (password: string) => Promise<boolean>;
 
   // CRM
   addClient: (client: Client) => Promise<void>;
@@ -183,6 +185,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (success) {
       await refreshUsers();
     }
+  };
+
+  const updateProfile = async (name: string): Promise<boolean> => {
+    if (!currentUser) return false;
+    const { success, error } = await authService.updateProfile(currentUser.id, name);
+    if (error) {
+      alert(error);
+      return false;
+    }
+    if (success) {
+      setCurrentUser(prev => prev ? { ...prev, name } : null);
+      await refreshUsers();
+      return true;
+    }
+    return false;
+  };
+
+  const changePassword = async (password: string): Promise<boolean> => {
+    const { success, error } = await authService.updatePassword(password);
+    if (error) {
+      alert(error);
+      return false;
+    }
+    return success;
   };
 
   // --- CRM ACTIONS ---
@@ -371,7 +397,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider value={{
       currentUser, users, properties, clients, isAuthenticated, isLoading,
-      login, createUser, logout, updateUserRole, toggleUserBlock,
+      login, createUser, logout, updateUserRole, toggleUserBlock, updateProfile, changePassword,
       addClient, removeClient, updateClient,
       findPropertyByUrl, addProperty, addProperties, claimProperty, updateStatus, updateManagerDispatch, markAsSold, deleteProperty, deletePropertiesBulk, getStats,
       uploadDocument

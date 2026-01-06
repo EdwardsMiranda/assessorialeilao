@@ -251,4 +251,45 @@ export const authService = {
             return { success: false, error: 'Erro ao bloquear/desbloquear usuário' };
         }
     },
+
+    /**
+     * Update user profile (name)
+     */
+    async updateProfile(userId: string, name: string): Promise<{ success: boolean; error: string | null }> {
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({ name })
+                .eq('id', userId);
+
+            if (error) {
+                return { success: false, error: error.message };
+            }
+
+            return { success: true, error: null };
+        } catch (error) {
+            console.error('Update profile error:', error);
+            return { success: false, error: 'Erro ao atualizar perfil' };
+        }
+    },
+
+    /**
+     * Update user password in Supabase Auth
+     */
+    async updatePassword(password: string): Promise<{ success: boolean; error: string | null }> {
+        try {
+            const { error } = await supabase.auth.updateUser({
+                password: password
+            });
+
+            if (error) {
+                return { success: false, error: error.message };
+            }
+
+            return { success: true, error: null };
+        } catch (error) {
+            console.error('Update password error:', error);
+            return { success: false, error: 'Erro ao atualizar senha' };
+        }
+    }
 };

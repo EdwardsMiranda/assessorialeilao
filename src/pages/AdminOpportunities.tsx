@@ -6,8 +6,10 @@ import { Eye, DollarSign, AlertTriangle, Send, CheckSquare, MapPin, CreditCard, 
 import { AnalysisModal } from '../components/AnalysisModal';
 
 export const AdminOpportunities: React.FC = () => {
-    const { properties, clients, updateManagerDispatch, markAsSold } = useApp();
+    const { properties, clients, updateManagerDispatch, markAsSold, deletePropertiesBulk, userRole } = useApp();
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const isManager = userRole === 'MANAGER';
 
     // Arrematação Modal State
     const [isArrematarModalOpen, setIsArrematarModalOpen] = useState(false);
@@ -79,6 +81,33 @@ export const AdminOpportunities: React.FC = () => {
         }
     };
 
+    const toggleSelectAll = () => {
+        if (selectedIds.length === processedProperties.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(processedProperties.map(p => p.id));
+        }
+    };
+
+    const toggleSelectOne = (id: string) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleDeleteBulk = async () => {
+        if (selectedIds.length === 0) return;
+        if (window.confirm(`Tem certeza que deseja excluir ${selectedIds.length} oportunidades validadas?`)) {
+            try {
+                await deletePropertiesBulk(selectedIds);
+                setSelectedIds([]);
+            } catch (error) {
+                console.error('Error deleting properties:', error);
+                alert('Erro ao excluir propriedades.');
+            }
+        }
+    };
+
     // Helper to check thesis match
     const checkClientMatch = (client: any, prop: Property) => {
         if (!prop.analysisData) return false;
@@ -111,6 +140,21 @@ export const AdminOpportunities: React.FC = () => {
                         />
                     </div>
 
+                    {isManager && (
+                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-300">
+                            <input
+                                type="checkbox"
+                                id="select-all"
+                                checked={selectedIds.length > 0 && selectedIds.length === processedProperties.length}
+                                onChange={toggleSelectAll}
+                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                            />
+                            <label htmlFor="select-all" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                                Selecionar Todos
+                            </label>
+                        </div>
+                    )}
+
                     <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full w-fit">
                         {processedProperties.length} encontradas
                     </span>
@@ -119,17 +163,29 @@ export const AdminOpportunities: React.FC = () => {
 
             {/* Toolbar */}
             <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="relative w-full md:w-96">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-gray-400" />
+                <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center">
+                    <div className="relative w-full md:w-96">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                            type="text"
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:ring focus:ring-blue-200 sm:text-sm"
+                            placeholder="Buscar por Nome ou Cidade..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
-                    <input
-                        type="text"
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:ring focus:ring-blue-200 sm:text-sm"
-                        placeholder="Buscar por Nome ou Cidade..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+
+                    {isManager && selectedIds.length > 0 && (
+                        <button
+                            onClick={handleDeleteBulk}
+                            className="w-full md:w-auto px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-bold flex items-center justify-center gap-2 shadow-sm transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                            Excluir Selecionados ({selectedIds.length})
+                        </button>
+                    )}
                 </div>
 
                 <div className="relative w-full md:w-auto">
@@ -168,7 +224,17 @@ export const AdminOpportunities: React.FC = () => {
                         const matchedClients = clients.filter(c => checkClientMatch(c, prop));
 
                         return (
-                            <div key={prop.id} className={`bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition-shadow ${isSent ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}>
+                            <div key={prop.id} className={`bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition-shadow relative ${isSent ? 'border-green-200 bg-green-50/30' : 'border-gray-200'} ${selectedIds.includes(prop.id) ? 'ring-2 ring-blue-400' : ''}`}>
+                                {isManager && (
+                                    <div className="absolute -left-3 top-1/2 -translate-y-1/2">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.includes(prop.id)}
+                                            onChange={() => toggleSelectOne(prop.id)}
+                                            className="w-5 h-5 text-blue-600 rounded-full focus:ring-blue-500 border-gray-300 shadow-sm cursor-pointer bg-white"
+                                        />
+                                    </div>
+                                )}
                                 <div className="flex flex-col gap-4">
 
                                     {/* Top Row: Badges */}
