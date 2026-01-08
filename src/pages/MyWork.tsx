@@ -273,7 +273,11 @@ export const MyWork: React.FC = () => {
                         onClick={() => setSelectedProperty(prop)}
                         className="text-indigo-600 hover:text-indigo-900 flex items-center justify-end gap-1 w-full"
                       >
-                        {prop.status === AnalysisStatus.EM_ANALISE ? 'Continuar' : 'Revisar'}
+                        {prop.status === AnalysisStatus.EM_ANALISE
+                          ? 'Continuar'
+                          : prop.status === AnalysisStatus.ABORTADO
+                            ? 'Retificar'
+                            : 'Revisar'}
                         <Edit className="w-4 h-4" />
                       </button>
                     </td>

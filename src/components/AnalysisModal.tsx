@@ -2118,7 +2118,11 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2 shadow-sm"
                                     >
                                         <CheckCircle className="w-4 h-4" />
-                                        {isFinalized ? 'Salvar Edição' : 'Concluir Análise'}
+                                        {property.status === AnalysisStatus.ABORTADO && isEditingMode
+                                            ? 'Retificar e Concluir'
+                                            : isFinalized
+                                                ? 'Salvar Edição'
+                                                : 'Concluir Análise'}
                                     </button>
                                 </>
                             ) : (
@@ -2152,18 +2156,27 @@ export const AnalysisModal: React.FC<AnalysisModalProps> = ({ property, onClose 
                     ) : (
                         <div className="flex justify-between items-center w-full">
                             <div className="flex flex-col">
-                                <p className={`font-bold text-sm ${property.status === AnalysisStatus.ANALISADO ? 'text-green-700' : 'text-red-700'}`}>
+                                <p className={`font-bold text-sm ${property.status === AnalysisStatus.ANALISADO ? 'text-green-700' : property.status === AnalysisStatus.ABORTADO ? 'text-red-700' : 'text-yellow-700'}`}>
                                     Análise Finalizada: {property.status}
                                 </p>
+                                {property.status === AnalysisStatus.ABORTADO && abortReason && (
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        <span className="font-semibold">Motivo:</span> {abortReason}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="flex gap-2">
                                 {isFinalized && (
                                     <button
                                         onClick={() => setIsEditingMode(true)}
-                                        className="px-4 py-2 bg-blue-100 text-blue-800 border border-blue-200 rounded-lg hover:bg-blue-200 flex items-center gap-2 text-sm font-medium"
+                                        className={`px-4 py-2 border rounded-lg flex items-center gap-2 text-sm font-medium ${property.status === AnalysisStatus.ABORTADO
+                                            ? 'bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-200'
+                                            : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200'
+                                            }`}
                                     >
-                                        <Edit className="w-4 h-4" /> Habilitar Edição
+                                        <Edit className="w-4 h-4" />
+                                        {property.status === AnalysisStatus.ABORTADO ? 'Retificar Análise' : 'Habilitar Edição'}
                                     </button>
                                 )}
                                 <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
