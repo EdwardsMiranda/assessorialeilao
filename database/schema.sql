@@ -33,7 +33,7 @@ CREATE TABLE properties (
     url TEXT NOT NULL,
     modality VARCHAR(100) NOT NULL,
     auction_date DATE,
-    status VARCHAR(50) NOT NULL CHECK (status IN ('Não Iniciado', 'Em Análise', 'Analisado', 'Abortado', 'Arrematado')),
+    status VARCHAR(50) NOT NULL CHECK (status IN ('Não Iniciado', 'Em Análise', 'Analisado', 'Abortado', 'Arrematado', 'Perdida')),
     assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
     added_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(500),
