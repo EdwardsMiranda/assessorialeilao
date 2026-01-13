@@ -269,17 +269,25 @@ export const MyWork: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => setSelectedProperty(prop)}
-                        className="text-indigo-600 hover:text-indigo-900 flex items-center justify-end gap-1 w-full"
-                      >
-                        {prop.status === AnalysisStatus.EM_ANALISE
-                          ? 'Continuar'
-                          : prop.status === AnalysisStatus.ABORTADO
-                            ? 'Retificar'
-                            : 'Revisar'}
-                        <Edit className="w-4 h-4" />
-                      </button>
+                      <div className="flex justify-end gap-2 group relative w-full">
+                        {prop.status === AnalysisStatus.ABORTADO && prop.abortReason && (
+                          <div className="absolute bottom-full mb-2 right-0 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none text-left">
+                            <strong>Motivo do Aborto:</strong> {prop.abortReason}
+                            <div className="absolute top-full right-4 border-4 border-transparent border-t-gray-900"></div>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setSelectedProperty(prop)}
+                          className="text-indigo-600 hover:text-indigo-900 flex items-center justify-end gap-1 w-full"
+                        >
+                          {prop.status === AnalysisStatus.EM_ANALISE
+                            ? 'Continuar'
+                            : prop.status === AnalysisStatus.ABORTADO
+                              ? 'Retificar'
+                              : 'Revisar'}
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

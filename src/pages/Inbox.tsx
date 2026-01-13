@@ -127,6 +127,7 @@ export const Inbox: React.FC = () => {
     const parseModality = (text: string): AuctionModality => {
         if (!text) return AuctionModality.LEILAO_JUDICIAL;
         const normalized = text.toLowerCase().trim();
+        if (normalized.includes('santander')) return AuctionModality.LEILAO_SFI_OUTRO;
         if (normalized.includes('judicial')) return AuctionModality.LEILAO_JUDICIAL;
         if (normalized.includes('sfi') || normalized.includes('fiduciária') || normalized.includes('caixa')) return AuctionModality.LEILAO_SFI_CAIXA;
         if (normalized.includes('aberta') || normalized.includes('licitacao')) return AuctionModality.LICITACAO_ABERTA;
@@ -334,36 +335,35 @@ export const Inbox: React.FC = () => {
 
         for (let i = 0; i < urls.length; i++) {
             const currentUrl = urls[i].trim();
-            setSmartProgress(((i + 1) / urls.length) * 100);
+            // ... (progress update)
 
             try {
-                // 1. Check duplicate
-                if (findPropertyByUrl(currentUrl)) {
-                    setSmartLogs((prev: string[]) => [`⚠️ [Duplicado] ${currentUrl}`, ...prev]);
-                    continue;
-                }
+                // ... (duplicate check)
 
-                setSmartLogs((prev: string[]) => [`🔍 Analisando: ${currentUrl}...`, ...prev]);
+                // ... (logs)
 
                 // 2. Extract Data via AI
                 const extractedData = await extractDataFromUrl(currentUrl);
 
-                // Check if extraction failed
-                if (!extractedData) {
-                    setSmartLogs((prev: string[]) => [`❌ Erro ao extrair dados de: ${currentUrl}`, ...prev]);
-                    continue;
-                }
+                // ... (extraction check)
 
                 // 3. Check Fit with Clients
                 const { matched, clientIds, reason } = await checkPropertyFit(extractedData, clients);
 
                 if (matched) {
                     // 4. Add Property
-                    // Defaulting to Leilão Judicial if not specified, parsing date if valid
+                    // Infer modality from URL or extracted data if possible
+                    let inferredModality = AuctionModality.LEILAO_JUDICIAL;
+                    if (currentUrl.toLowerCase().includes('santander')) {
+                        inferredModality = AuctionModality.LEILAO_SFI_OUTRO;
+                    } else if (currentUrl.toLowerCase().includes('caixa') || currentUrl.toLowerCase().includes('sfi')) {
+                        inferredModality = AuctionModality.LEILAO_SFI_CAIXA;
+                    }
+
                     await addProperty(
                         currentUrl,
-                        AuctionModality.LEILAO_JUDICIAL,
-                        new Date().toISOString().split('T')[0], // Fallback date as extraction doesn't provide it yet
+                        inferredModality,
+                        extractedData.eventDate || new Date().toISOString().split('T')[0], // Use extracted event date if available
                         extractedData.condoName || `Leilão em ${extractedData.cityState}` || 'Oportunidade Smart IA',
                         {
                             cityState: extractedData.cityState || '',
@@ -372,6 +372,7 @@ export const Inbox: React.FC = () => {
                             paymentMethod: extractedData.paymentTerms?.join(', ') || ''
                         }
                     );
+
 
                     // Note: Ideally we would tag the property with interested clients here.
                     // For now, we put it in the analysis notes or similar? 

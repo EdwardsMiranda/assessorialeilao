@@ -8,8 +8,8 @@ import { AnalysisStatus } from '../types';
 export const Dashboard: React.FC = () => {
   const { users, properties } = useApp();
 
-  // State for Month Filter (Defaults to current month YYYY-MM)
-  const [monthFilter, setMonthFilter] = useState(new Date().toISOString().slice(0, 7));
+  // State for Month Filter (Defaults to empty to show ALL initially)
+  const [monthFilter, setMonthFilter] = useState('');
 
   // 1. Filter properties based on Auction Date
   const filteredProperties = properties.filter(p => {
