@@ -14,6 +14,7 @@ export enum AnalysisStatus {
   ANALISADO = 'Analisado',
   ABORTADO = 'Abortado',
   ARREMATADO = 'Arrematado',
+  PERDIDA = 'Perdida',
 }
 
 export enum UserRole {
