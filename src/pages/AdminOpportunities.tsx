@@ -2,12 +2,12 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AnalysisStatus, Property, Client } from '../types';
-import { Eye, DollarSign, Send, MapPin, CreditCard, Gavel, Search, ArrowUpDown, Trophy, X, Calendar, Users } from 'lucide-react';
+import { Eye, DollarSign, Send, MapPin, CreditCard, Gavel, Search, ArrowUpDown, Trophy, X, Calendar } from 'lucide-react';
 import { AnalysisModal } from '../components/AnalysisModal';
 import { formatCurrency } from '../utils/formatters';
 
 export const AdminOpportunities: React.FC = () => {
-    const { properties, clients, updateManagerDispatch, markAsSold, isManager, updateStatus } = useApp();
+    const { properties, clients, updateManagerDispatch, markAsSold, updateStatus } = useApp();
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
 
     // Arrematação Modal State
@@ -24,7 +24,7 @@ export const AdminOpportunities: React.FC = () => {
 
     const openArrematarModal = (prop: Property) => {
         setArrematarPropId(prop.id);
-        setSoldAmount(prop.initialBid);
+        setSoldAmount(prop.analysisData?.initialBid || 0);
         setIsArrematarModalOpen(true);
     };
 
@@ -44,9 +44,19 @@ export const AdminOpportunities: React.FC = () => {
         const cityMatch = client.investmentThesis.cities.some((c: string) =>
             data.cityState.toLowerCase().includes(c.toLowerCase())
         );
-        const valueMatch = client.investmentThesis.maxBidValue >= prop.initialBid;
+        const valueMatch = client.investmentThesis.maxBidValue >= data.initialBid;
         // Payment match is loose for now
         return cityMatch && valueMatch;
+    };
+
+    // Calculate Total Cost Helper if needed (or use finalNetProfit)
+    const calculateTotalCost = (data: any) => {
+        return (data.initialBid || 0) +
+            (data.itbiRate ? (data.venalValue * data.itbiRate / 100) : 0) +
+            (data.registryValue || 0) +
+            (data.renovationValue || 0) +
+            (data.condoDebt || 0) +
+            (data.iptuDebt || 0);
     };
 
     // Filter properties: ANALISADO and ROI > 20
@@ -58,7 +68,7 @@ export const AdminOpportunities: React.FC = () => {
         })
         .filter(p => {
             if (!searchTerm) return true;
-            return p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            return (p.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                 p.analysisData?.cityState.toLowerCase().includes(searchTerm.toLowerCase()) || false;
         })
         .sort((a, b) => {
@@ -69,7 +79,7 @@ export const AdminOpportunities: React.FC = () => {
                 return (a.auctionDate || '').localeCompare(b.auctionDate || '');
             }
             if (sortBy === 'title') {
-                return a.title.localeCompare(b.title);
+                return (a.title || '').localeCompare(b.title || '');
             }
             if (sortBy === 'city') {
                 return (a.analysisData?.cityState || '').localeCompare(b.analysisData?.cityState || '');
@@ -136,25 +146,26 @@ export const AdminOpportunities: React.FC = () => {
                 ) : (
                     processedProperties.map(prop => {
                         const data = prop.analysisData!;
-                        const profit = data.bankValuation - data.totalCost;
+                        // Calculate profit dynamically if needed
+                        const profit = data.finalNetProfit ?? (data.bankValuation - calculateTotalCost(data));
 
                         // Find matched clients
                         const matchedClients = clients.filter(client => {
                             const cityMatch = client.investmentThesis.cities.some((c: string) =>
                                 data.cityState.toLowerCase().includes(c.toLowerCase())
                             );
-                            const valueMatch = client.investmentThesis.maxBidValue >= prop.initialBid;
+                            const valueMatch = client.investmentThesis.maxBidValue >= data.initialBid;
                             const paymentMatch = !client.investmentThesis.paymentMethods || client.investmentThesis.paymentMethods.length === 0 ||
                                 client.investmentThesis.paymentMethods.some((pm: string) =>
                                     data.paymentMethod.toLowerCase().includes(pm.toLowerCase())
                                 );
-                            return cityMatch && valueMatch && paymentMatch; // Strict matching for suggestions
+                            return cityMatch && valueMatch && paymentMatch;
                         });
 
                         // Manager Logic Variables
-                        const recipient = prop.managerAction?.recipient || '';
-                        const isSent = prop.managerAction?.status === 'Enviado';
-                        const clientId = prop.managerAction?.clientId || '';
+                        const recipient = prop.managerDispatch?.recipient || '';
+                        const isSent = prop.managerDispatch?.sent || false;
+                        const clientId = prop.managerDispatch?.clientId || '';
 
                         return (
                             <div key={prop.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
@@ -218,7 +229,7 @@ export const AdminOpportunities: React.FC = () => {
                                                 <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
                                                     <Gavel className="w-3 h-3" /> Lance Inicial
                                                 </p>
-                                                <p className="font-bold text-gray-900">{formatCurrency(prop.initialBid)}</p>
+                                                <p className="font-bold text-gray-900">{formatCurrency(data.initialBid)}</p>
                                             </div>
                                             <div className="bg-gray-50 p-2 rounded border border-gray-100">
                                                 <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
