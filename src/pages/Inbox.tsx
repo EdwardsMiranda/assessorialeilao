@@ -348,9 +348,11 @@ export const Inbox: React.FC = () => {
                 // ... (extraction check)
 
                 // 3. Check Fit with Clients
-                const { matched, clientIds, reason } = await checkPropertyFit(extractedData, clients);
+                const { matched, clientIds, reason } = extractedData
+                    ? await checkPropertyFit(extractedData, clients)
+                    : { matched: false, clientIds: [], reason: 'Falha na extração de dados' };
 
-                if (matched) {
+                if (extractedData && matched) {
                     // 4. Add Property
                     // Infer modality from URL or extracted data if possible
                     let inferredModality = AuctionModality.LEILAO_JUDICIAL;
@@ -363,7 +365,8 @@ export const Inbox: React.FC = () => {
                     await addProperty(
                         currentUrl,
                         inferredModality,
-                        extractedData.eventDate || new Date().toISOString().split('T')[0], // Use extracted event date if available
+                        // @ts-ignore - eventDate might be missing from the type definition but is returned by service
+                        extractedData.eventDate || new Date().toISOString().split('T')[0],
                         extractedData.condoName || `Leilão em ${extractedData.cityState}` || 'Oportunidade Smart IA',
                         {
                             cityState: extractedData.cityState || '',
