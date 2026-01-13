@@ -91,12 +91,27 @@ export const Inbox: React.FC = () => {
         setTimeout(() => setSuccessMsg(''), 3000);
     };
 
+    // Helper to check if date is strictly in the future (tomorrow onwards)
+    const isDateInFuture = (dateString: string) => {
+        if (!dateString) return false;
+        const inputDate = new Date(dateString + 'T00:00:00');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return inputDate > today;
+    };
+
     const handleManualSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
         // Auction date is optional for Venda Direta
         const isVendaDireta = modality === AuctionModality.VENDA_DIRETA;
         if (!url || !title || (!isVendaDireta && !auctionDate)) return;
+
+        // Validation: Date must be in the future
+        if (!isVendaDireta && auctionDate && !isDateInFuture(auctionDate)) {
+            alert("A data do leilão deve ser futura (a partir de amanhã). Imóveis com data de hoje ou passada não são permitidos.");
+            return;
+        }
 
         if (checkManualDuplication()) {
             return; // Modal opens
@@ -239,6 +254,12 @@ export const Inbox: React.FC = () => {
                 }
             }
 
+            // Validation: Skip if date is today or past (unless Venda Direta)
+            if (modalityEnum !== AuctionModality.VENDA_DIRETA && (!finalDate || !isDateInFuture(finalDate))) {
+                errors++; // Count as error/skipped
+                continue;
+            }
+
             // Optional analysis data
             const analysisData: Partial<PropertyAnalysisData> = {};
             if (mapping.cityState !== -1) analysisData.cityState = row[mapping.cityState]?.toString().trim();
@@ -345,7 +366,24 @@ export const Inbox: React.FC = () => {
                 // 2. Extract Data via AI
                 const extractedData = await extractDataFromUrl(currentUrl);
 
-                // ... (extraction check)
+                // Infer modality early for validation
+                let inferredModality = AuctionModality.LEILAO_JUDICIAL;
+                if (currentUrl.toLowerCase().includes('santander')) {
+                    inferredModality = AuctionModality.LEILAO_SFI_OUTRO;
+                } else if (currentUrl.toLowerCase().includes('caixa') || currentUrl.toLowerCase().includes('sfi')) {
+                    inferredModality = AuctionModality.LEILAO_SFI_CAIXA;
+                } else if (currentUrl.toLowerCase().includes('direta')) {
+                    inferredModality = AuctionModality.VENDA_DIRETA;
+                }
+
+                // Validation: Check date integrity
+                // Default to today if missing to force validation failure (unless Venda Direta)
+                const eventDate = extractedData?.eventDate || new Date().toISOString().split('T')[0];
+
+                if (inferredModality !== AuctionModality.VENDA_DIRETA && !isDateInFuture(eventDate)) {
+                    setSmartLogs((prev: string[]) => [`❌ [Data Inválida] Ignorado. Leilão é hoje (${eventDate}) ou já passou/não identificado.`, ...prev]);
+                    continue;
+                }
 
                 // 3. Check Fit with Clients
                 const { matched, clientIds, reason } = extractedData

@@ -215,7 +215,9 @@ export const extractDataFromUrl = async (url: string): Promise<{
   initialBid: number,
   bankValuation: number,
   condoDebtRule: boolean,
-  paymentTerms: string[]
+
+  paymentTerms: string[],
+  eventDate?: string
 } | null> => {
   console.log('[extractDataFromUrl] Iniciando extração para:', url);
   const ai = getClient();
