@@ -188,20 +188,18 @@ export const AdminOpportunities: React.FC = () => {
                                     </div>
 
                                     <div className="flex items-center gap-2">
-                                        {/* Lost Opportunity Button */}
-                                        {prop.auctionDate && prop.auctionDate < new Date().toISOString().split('T')[0] && (
-                                            <button
-                                                onClick={async () => {
-                                                    if (window.confirm("Marcar como Oportunidade Perdida? O leilão já passou.")) {
-                                                        await updateStatus(prop.id, AnalysisStatus.PERDIDA);
-                                                    }
-                                                }}
-                                                className="inline-flex items-center gap-1 px-3 py-1 bg-gray-600 text-white text-xs font-bold rounded hover:bg-gray-700 shadow-sm transition-colors"
-                                                title="Leilão já ocorreu"
-                                            >
-                                                <X className="w-3 h-3" /> PERDIDA
-                                            </button>
-                                        )}
+                                        {/* Lost Opportunity Button - Always Visible */}
+                                        <button
+                                            onClick={async () => {
+                                                if (window.confirm("Tem certeza que deseja marcar como Oportunidade Perdida?")) {
+                                                    await updateStatus(prop.id, AnalysisStatus.PERDIDA);
+                                                }
+                                            }}
+                                            className="inline-flex items-center gap-1 px-3 py-1 bg-gray-600 text-white text-xs font-bold rounded hover:bg-gray-700 shadow-sm transition-colors"
+                                            title="Marcar como Perdida"
+                                        >
+                                            <X className="w-3 h-3" /> PERDIDA
+                                        </button>
 
                                         <button
                                             onClick={() => openArrematarModal(prop)}
