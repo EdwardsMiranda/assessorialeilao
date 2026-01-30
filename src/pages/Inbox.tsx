@@ -31,8 +31,14 @@ export const Inbox: React.FC = () => {
     const [existingProp, setExistingProp] = useState<any>(null);
 
     // Import State
+    interface ImportError {
+        row: number;
+        url: string;
+        reason: string;
+    }
+
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [importStats, setImportStats] = useState<{ total: number, errors: number, duplicates: number } | null>(null);
+    const [importStats, setImportStats] = useState<{ total: number, errors: ImportError[], duplicates: number } | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
 
     // Smart Import State
@@ -209,7 +215,7 @@ export const Inbox: React.FC = () => {
         }
 
         const newItems: Array<{ url: string, modality: AuctionModality, auctionDate: string, title: string, initialAnalysisData?: Partial<PropertyAnalysisData> }> = [];
-        let errors = 0;
+        const errorList: ImportError[] = [];
         let duplicates = 0;
 
         // Skip header
@@ -256,7 +262,15 @@ export const Inbox: React.FC = () => {
 
             // Validation: Skip if date is today or past (unless Venda Direta)
             if (modalityEnum !== AuctionModality.VENDA_DIRETA && (!finalDate || !isDateInFuture(finalDate))) {
-                errors++; // Count as error/skipped
+                let reason = 'Data inválida';
+                if (!finalDate) reason = 'Data não encontrada ou formato inválido';
+                else if (!isDateInFuture(finalDate)) reason = `Data do leilão é hoje ou passada: ${finalDate}`;
+
+                errorList.push({
+                    row: i + 1,
+                    url: cUrl,
+                    reason
+                });
                 continue;
             }
 
@@ -287,7 +301,7 @@ export const Inbox: React.FC = () => {
             setTimeout(() => setSuccessMsg(''), 5000);
         }
 
-        setImportStats({ total: newItems.length, errors, duplicates });
+        setImportStats({ total: newItems.length, errors: errorList, duplicates });
         setIsMappingModalOpen(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
@@ -717,7 +731,7 @@ export const Inbox: React.FC = () => {
                                 {importStats && (
                                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                                         <h4 className="text-sm font-bold text-gray-900 mb-2">Resumo da Importação</h4>
-                                        <div className="flex flex-wrap gap-4">
+                                        <div className="flex flex-wrap gap-4 mb-4">
                                             <div className="flex items-center gap-2 text-sm text-green-700">
                                                 <CheckCircle className="w-4 h-4" />
                                                 <span>{importStats.total} novos importados</span>
@@ -728,9 +742,35 @@ export const Inbox: React.FC = () => {
                                             </div>
                                             <div className="flex items-center gap-2 text-sm text-red-700">
                                                 <AlertTriangle className="w-4 h-4" />
-                                                <span>{importStats.errors} erros/inválidos</span>
+                                                <span>{importStats.errors.length} erros/inválidos</span>
                                             </div>
                                         </div>
+
+                                        {importStats.errors.length > 0 && (
+                                            <div className="mt-4 border-t border-gray-200 pt-3">
+                                                <h5 className="text-xs font-bold text-red-800 mb-2 uppercase tracking-wide">Detalhes dos Erros</h5>
+                                                <div className="bg-white rounded border border-red-100 overflow-hidden max-h-60 overflow-y-auto">
+                                                    <table className="min-w-full text-xs text-left">
+                                                        <thead className="bg-red-50 text-red-800 font-medium">
+                                                            <tr>
+                                                                <th className="px-3 py-2">Linha</th>
+                                                                <th className="px-3 py-2">URL</th>
+                                                                <th className="px-3 py-2">Motivo</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-gray-100">
+                                                            {importStats.errors.map((err, idx) => (
+                                                                <tr key={idx} className="hover:bg-gray-50">
+                                                                    <td className="px-3 py-2 font-mono text-gray-500">{err.row}</td>
+                                                                    <td className="px-3 py-2 text-blue-600 truncate max-w-[200px]" title={err.url}>{err.url}</td>
+                                                                    <td className="px-3 py-2 text-red-600">{err.reason}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
