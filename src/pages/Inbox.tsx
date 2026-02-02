@@ -152,8 +152,8 @@ export const Inbox: React.FC = () => {
         if (normalized.includes('judicial')) return AuctionModality.LEILAO_JUDICIAL;
         if (normalized.includes('sfi') || normalized.includes('fiduciária') || normalized.includes('caixa')) return AuctionModality.LEILAO_SFI_CAIXA;
         if (normalized.includes('aberta') || normalized.includes('licitacao')) return AuctionModality.LICITACAO_ABERTA;
-        if (normalized.includes('online')) return AuctionModality.VENDA_ONLINE;
         if (normalized.includes('direta')) return AuctionModality.VENDA_DIRETA;
+        if (normalized.includes('online')) return AuctionModality.VENDA_ONLINE;
         return AuctionModality.LEILAO_JUDICIAL; // Default fallback
     };
 
@@ -239,7 +239,10 @@ export const Inbox: React.FC = () => {
 
             // Date processing logic
             if (cDate) {
-                if (!isNaN(Number(cDate)) && Number(cDate) > 40000) {
+                const lowerDate = cDate.toLowerCase();
+                if (lowerDate.includes('não há') || lowerDate.includes('nao ha')) {
+                    finalDate = ''; // Valid empty date
+                } else if (!isNaN(Number(cDate)) && Number(cDate) > 40000) {
                     // Excel serial date
                     const dateObj = new Date(Math.round((Number(cDate) - 25569) * 86400 * 1000));
                     finalDate = dateObj.toISOString().split('T')[0];
