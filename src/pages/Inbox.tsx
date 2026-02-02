@@ -234,7 +234,7 @@ export const Inbox: React.FC = () => {
             const cModality = mapping.modality !== -1 ? row[mapping.modality]?.toString().trim() : '';
             const cDate = mapping.auctionDate !== -1 ? row[mapping.auctionDate]?.toString().trim() : '';
 
-            const modalityEnum = parseModality(cModality);
+            let modalityEnum = parseModality(cModality);
             let finalDate = '';
 
             // Date processing logic
@@ -242,6 +242,8 @@ export const Inbox: React.FC = () => {
                 const lowerDate = cDate.toLowerCase();
                 if (lowerDate.includes('não há') || lowerDate.includes('nao ha')) {
                     finalDate = ''; // Valid empty date
+                    // Force Venda Direta if date explicitly says "none", as per user domain rules
+                    modalityEnum = AuctionModality.VENDA_DIRETA;
                 } else if (!isNaN(Number(cDate)) && Number(cDate) > 40000) {
                     // Excel serial date
                     const dateObj = new Date(Math.round((Number(cDate) - 25569) * 86400 * 1000));
@@ -266,7 +268,7 @@ export const Inbox: React.FC = () => {
             // Validation: Skip if date is today or past (unless Venda Direta)
             if (modalityEnum !== AuctionModality.VENDA_DIRETA && (!finalDate || !isDateInFuture(finalDate))) {
                 let reason = 'Data inválida';
-                if (!finalDate) reason = 'Data não encontrada ou formato inválido';
+                if (!finalDate) reason = `Data não encontrada ou formato inválido (Modalidade: ${modalityEnum}, Data: ${cDate})`;
                 else if (!isDateInFuture(finalDate)) reason = `Data do leilão é hoje ou passada: ${finalDate}`;
 
                 errorList.push({
