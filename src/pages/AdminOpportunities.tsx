@@ -2,13 +2,14 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AnalysisStatus, Property, Client } from '../types';
-import { Eye, DollarSign, Send, MapPin, CreditCard, Gavel, Search, ArrowUpDown, Trophy, X, Calendar } from 'lucide-react';
+import { Eye, DollarSign, Send, MapPin, CreditCard, Gavel, Search, ArrowUpDown, Trophy, X, Calendar, Clipboard, Check } from 'lucide-react';
 import { AnalysisModal } from '../components/AnalysisModal';
 import { formatCurrency } from '../utils/formatters';
 
 export const AdminOpportunities: React.FC = () => {
     const { properties, clients, updateManagerDispatch, markAsSold, updateStatus } = useApp();
     const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
 
     // Arrematação Modal State
     const [isArrematarModalOpen, setIsArrematarModalOpen] = useState(false);
@@ -57,6 +58,58 @@ export const AdminOpportunities: React.FC = () => {
             (data.renovationValue || 0) +
             (data.condoDebt || 0) +
             (data.iptuDebt || 0);
+    };
+
+    const generateOpportunityMessage = (prop: Property) => {
+        const data = prop.analysisData;
+        if (!data) return '';
+
+        const totalCost = calculateTotalCost(data);
+        const returnPercentage = totalCost > 0 ? (data.rentValue / totalCost) * 100 : 0;
+        const totalDebts = (data.condoDebt || 0) + (data.iptuDebt || 0);
+
+        return `Olá! Como combinado, aqui está um imóvel para arrematação que atende aos seus critérios:
+
+📌 Imóvel na cidade ${data.cityState || 'Não informado'}, no condomínio ${data.condoName || 'Não informado'}, no endereço ${data.address || 'Não informado'}
+📅 Data para arrematação: ${prop.auctionDate ? new Date(prop.auctionDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'Não informada'}
+🔹 Lance inicial: ${formatCurrency(data.initialBid)}
+🔺 Lance máximo recomendado: ${formatCurrency(data.maxBid || 0)}
+💵 Forma(s) de pagamento aceita(s) para este imóvel: ${data.paymentMethod}
+🏠 Valor de mercado: ${formatCurrency(data.bankValuation)}
+
+Seu objetivo: Lucratividade e Segurança
+
+Valores pertinentes para seu objetivo:
+
+📈 Venda:
+- Lucro líquido estimado: ${formatCurrency(data.finalNetProfit || 0)}
+
+🤝 Aluguel:
+- Menor aluguel mensal encontrado: ${formatCurrency(data.rentValue || 0)}
+- Retorno mensal em torno de: ${returnPercentage.toFixed(2)}%
+
+📍 Pontos de interesse próximos ao imóvel:
+- Ponto de transporte: ${data.locPublicTransport || 'Não informado'}
+- Mercado, padaria ou farmácia: ${data.locCommerce || 'Não informado'}
+- Hospital ou escola: ${data.locHealthEducation || 'Não informado'}
+- Igreja ou lazer: ${data.locLeisure || 'Não informado'}
+- Ponto de interesse diferenciado: ${data.locDifferential || 'Não informado'}
+
+🚨 Dívida de condomínio estimada: ${formatCurrency(data.condoDebt || 0)}
+🚨 Dívida de IPTU estimada: ${formatCurrency(data.iptuDebt || 0)}
+⚠️ Dívidas totais estimadas: ${formatCurrency(totalDebts)}
+
+🏦 Comprovante das formas de pagamento aceitas: ${data.paymentPrint || 'Não disponível'}
+🌐 Link para participar: ${data.auctionLotLink || prop.url}
+
+Aproveite esta oportunidade. Ela pode não se repetir.`;
+    };
+
+    const handleCopyMessage = (prop: Property) => {
+        const message = generateOpportunityMessage(prop);
+        navigator.clipboard.writeText(message);
+        setCopiedId(prop.id);
+        setTimeout(() => setCopiedId(null), 2000);
     };
 
     // Filter properties: ANALISADO and ROI > 20
@@ -188,6 +241,18 @@ export const AdminOpportunities: React.FC = () => {
                                     </div>
 
                                     <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => handleCopyMessage(prop)}
+                                            className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors ${copiedId === prop.id
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                                                }`}
+                                            title="Copiar Mensagem"
+                                        >
+                                            {copiedId === prop.id ? <Check className="w-3 h-3" /> : <Clipboard className="w-3 h-3" />}
+                                            {copiedId === prop.id ? 'COPIADO' : 'COPIAR'}
+                                        </button>
+
                                         {/* Lost Opportunity Button - Always Visible */}
                                         <button
                                             onClick={async () => {
